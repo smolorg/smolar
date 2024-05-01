@@ -5,7 +5,7 @@ well, it is obvious this file will contain A LOT but there are some naming
 conventions that i follow here (i try):
 
 Array:
-* "public" functions or functions to be used start from ascii letter (a-z)
+* "public" functions or functions to be used start from "sm" such as: smAdd, smRandom
 * "private" array functions start and end with double underscores "__"
 * functions that can be parallelized will start from "P" or "__P"
 * function names can be long dw
@@ -43,7 +43,7 @@ typedef struct {
 /*
 free all the memory allocated by an Array
 */
-void cleanupArray(Array* arr) {
+void smCleanup(Array* arr) {
     free(arr->data);
     free(arr->shape);
     free(arr->strides);
@@ -133,7 +133,7 @@ void __recalculateBackstrides__(Array* arr) {
 assume that the shape and number of dims are given,
 create a new Array from that.
 */
-Array* createArray(const int* shape, int ndim) {
+Array* smCreate(const int* shape, int ndim) {
     if(ndim <= 0) {
         fprintf(stderr, "Cannot initialize Array of dimensions %d", ndim);
         exit(1);
@@ -184,7 +184,7 @@ bool __checkShapeCompatible__(Array* arr, const int* shape, int ndim) {
 initialize the Array's data with values (has to be 1D in memory)
 assume values length the same as Array's totalsize
 */
-void initArrayWithValues(Array* arr, float* values) {
+void smFromValues(Array* arr, float* values) {
     for(int i=0; i<arr->totalsize; i++) {
         arr->data[i] = values[i];
     }
@@ -193,8 +193,8 @@ void initArrayWithValues(Array* arr, float* values) {
 /*
 random array from shape, values will be in range `[0.0, 1.0]`
 */
-Array* initRandomArrayFromShape(const int* shape, int ndim) {
-    Array* arr = createArray(shape, ndim);
+Array* smRandom(const int* shape, int ndim) {
+    Array* arr = smCreate(shape, ndim);
 
     for(int i=0; i<arr->totalsize; i++) {
         arr->data[i] = _getrandomFloat(0.f, 1.f);
@@ -228,7 +228,7 @@ void __printArrayData__(Array* arr) {
 /*
 prints the array info: shape, strides, order of Array (C or F)
 */
-void printArrayInfo(Array* arr) {
+void smPrintInfo(Array* arr) {
     fprintf(stdout, "Shape: ");
     __printArrayInternals__(arr, arr->shape);
     fprintf(stdout, "Strides: ");
@@ -273,7 +273,7 @@ char* __traverseHelper__(
 /*
 traverse array according to backstrides and execute a printf on each element
 */
-void showArray(Array* arr) {
+void smShow(Array* arr) {
     char* curr = (char*)arr->data;
 
     curr = __traverseHelper__(
@@ -293,7 +293,7 @@ void showArray(Array* arr) {
 - ndim should be equal
 - each element in the shape should be equal
 */
-int checkShapesEqual(Array* a, Array* b) {
+int smCheckShapesEqual(Array* a, Array* b) {
     int equal = 1;
     
     if (a->ndim != b->ndim) equal = 0;
@@ -316,7 +316,7 @@ performing broadcasting (if needed) between any two Arrays.
 returns `NULL` if shapes aren't broadcastable
 */
 int* __broadcastFinalShape__(Array* a, Array* b) {
-    if(checkShapesEqual(a, b)) return a->shape;
+    if(smCheckShapesEqual(a, b)) return a->shape;
 
     int res_ndim = (a->ndim > b->ndim) ? a->ndim: b->ndim;
 
@@ -367,12 +367,12 @@ is "broadcastable" to the new shape.
 if you use this function, you will have to manually free the result of broadcasted array
 */
 Array* __broadcastArray__(Array* arr, const int* shape, int ndim) {
-    Array* res = createArray(shape, ndim);
+    Array* res = smCreate(shape, ndim);
 
     bool do_copy = (res->totalsize == arr->totalsize) ? false : true;
 
     if(!do_copy) 
-        initArrayWithValues(res, arr->data);
+        smFromValues(res, arr->data);
     else {
         // resultant totalsize of broadcasting one Array (if possible) 
         // will always be a multiple of original Array's totalsize
@@ -392,15 +392,15 @@ Array* __broadcastArray__(Array* arr, const int* shape, int ndim) {
 /*
 reshape an Array to new shape and new ndim
 */
-Array* reshapeToNew(Array* arr, const int* shape, int ndim) {
+Array* smReshapeNew(Array* arr, const int* shape, int ndim) {
     bool possible = __checkShapeCompatible__(arr, shape, ndim);
     if(!possible) {
         fprintf(stderr, "Cannot reshape due to invalid shape.\n");
         exit(1);
     }
 
-    Array* res = createArray(shape, ndim);
-    initArrayWithValues(res, arr->data);
+    Array* res = smCreate(shape, ndim);
+    smFromValues(res, arr->data);
 
     return res;
 }
@@ -411,7 +411,7 @@ inplace reshape operation
 this will just change the shape and strides of the Array.
 the underlying data in the memory is not touched.
 */
-void reshapeInplace(Array* arr, const int* shape, int ndim) {
+void smReshapeInplace(Array* arr, const int* shape, int ndim) {
     bool possible = __checkShapeCompatible__(arr, shape, ndim);
     if(!possible) {
         fprintf(stderr, "Cannot reshape due to invalid shape.\n");
@@ -432,15 +432,15 @@ void reshapeInplace(Array* arr, const int* shape, int ndim) {
 transpose an Array along given permutation of axes
 assume axes is a valid permutation
 */
-Array* transposeToNew(Array* arr, const int* axes) {
-    Array* res = createArray(arr->shape, arr->ndim);
+Array* smTransposeNew(Array* arr, const int* axes) {
+    Array* res = smCreate(arr->shape, arr->ndim);
     if(arr->ndim == 1) {
-        initArrayWithValues(res, arr->data);
+        smFromValues(res, arr->data);
         return res;
     }
 
     // set data
-    initArrayWithValues(res, arr->data);
+    smFromValues(res, arr->data);
 
     int* _axes = (int*)malloc(res->ndim * sizeof(int));
     _checkNull(_axes);
@@ -475,7 +475,7 @@ Array* transposeToNew(Array* arr, const int* axes) {
 can be parallelized.
 */
 Array* __PaddArrays__(Array* a, Array* b) {
-    Array* res = createArray(a->shape, a->ndim);
+    Array* res = smCreate(a->shape, a->ndim);
 
     for(int i=0; i<a->totalsize; i++) {
         res->data[i] = a->data[i] + b->data[i];
@@ -489,8 +489,8 @@ add the elements of two Arrays elementwise
 if the shapes are not equal but broadcastable,
 then broadcasting will take place.
 */
-Array* addTwoArrays(Array* a, Array* b) {
-    if (checkShapesEqual(a, b))
+Array* smAdd(Array* a, Array* b) {
+    if (smCheckShapesEqual(a, b))
         return __PaddArrays__(a, b);
 
     int* res_shape = __broadcastFinalShape__(a, b);
@@ -509,7 +509,7 @@ Array* addTwoArrays(Array* a, Array* b) {
 
     Array* res = __PaddArrays__(afinal, bfinal);
 
-    cleanupArray(afinal); cleanupArray(bfinal);
+    smCleanup(afinal); smCleanup(bfinal);
     free(res_shape);
 
     return res;
@@ -521,13 +521,13 @@ for now, assume shapes of both are same
 
 TODO: implement broadcasting
 */
-Array* mulArrays(Array* a, Array* b) {
-    if (!checkShapesEqual(a, b)) {
+Array* smMul(Array* a, Array* b) {
+    if (!smCheckShapesEqual(a, b)) {
         fprintf(stdout, "Cannot add two Arrays of non-broadcastable shapes.\n");
         exit(1);
     }
 
-    Array* res = createArray(a->shape, a->ndim);
+    Array* res = smCreate(a->shape, a->ndim);
 
     for(int i=0; i<a->totalsize; i++) {
         res->data[i] = a->data[i] * b->data[i];
@@ -544,12 +544,12 @@ int main() {
     const int b_shape[] = {2, 3, 5};
     fprintf(stdout, "Creating random Array...\n\n");
 
-    Array* b = initRandomArrayFromShape(b_shape, 3);
-    Array* bT = transposeToNew(b, NULL);
+    Array* b = smRandom(b_shape, 3);
+    Array* bT = smTransposeNew(b, NULL);
 
-    showArray(bT);
-    printArrayInfo(bT);
+    smShow(bT);
+    smPrintInfo(bT);
 
-    cleanupArray(b); cleanupArray(bT);
+    smCleanup(b); smCleanup(bT);
     return 0;
 }
