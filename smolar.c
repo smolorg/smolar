@@ -280,9 +280,6 @@ void smShow(Array* arr) {
         curr, arr->shape, arr->strides, arr->backstrides,
         arr->ndim, 0
     );
-
-    fprintf(stdout, "Shape: ");
-    __printArrayInternals__(arr, arr->shape);
 }
 
 
@@ -377,12 +374,11 @@ Array* __broadcastArray__(Array* arr, const int* shape, int ndim) {
         // resultant totalsize of broadcasting one Array (if possible) 
         // will always be a multiple of original Array's totalsize
         // example: (3, ) and (2, 2, 3)
-        // find the multiple and copy original's data that many times
+        // when the index reaches the original array's boundary, wrap around to 0
 
-        int n_copy = (res->totalsize / arr->totalsize) - 1;
+        int boundary = arr->totalsize;
         for(int i=0; i<res->totalsize; i++) {
-            int ind = i % n_copy;
-            res->data[i] = arr->data[ind];
+            res->data[i] = arr->data[i % boundary];
         }
     }
 
@@ -465,7 +461,7 @@ Array* smTransposeNew(Array* arr, const int* axes) {
     }
     free(newshape); free(newstrides);
     __recalculateBackstrides__(res);
-    __setArrayFlags__(arr);
+    __setArrayFlags__(res);
 
     free(_axes);
     return res;
@@ -479,6 +475,16 @@ Array* __PaddArrays__(Array* a, Array* b) {
 
     for(int i=0; i<a->totalsize; i++) {
         res->data[i] = a->data[i] + b->data[i];
+    }
+
+    return res;
+}
+
+Array* __PmulArrays__(Array* a, Array* b) {
+    Array* res = smCreate(a->shape, a->ndim);
+
+    for(int i=0; i<a->totalsize; i++) {
+        res->data[i] = a->data[i] * b->data[i];
     }
 
     return res;
@@ -522,16 +528,27 @@ for now, assume shapes of both are same
 TODO: implement broadcasting
 */
 Array* smMul(Array* a, Array* b) {
-    if (!smCheckShapesEqual(a, b)) {
-        fprintf(stdout, "Cannot add two Arrays of non-broadcastable shapes.\n");
+    if (smCheckShapesEqual(a, b))
+        return __PmulArrays__(a, b);
+
+    int* res_shape = __broadcastFinalShape__(a, b);
+    
+    if(res_shape == NULL) {
+        fprintf(stderr, "Cannot multiply Arrays of non-broadcastable shapes.\n");
         exit(1);
     }
 
-    Array* res = smCreate(a->shape, a->ndim);
+    // broadcast shapes
+    // free broadcasts
+    int res_ndim = (a->ndim > b->ndim) ? a->ndim: b->ndim;
 
-    for(int i=0; i<a->totalsize; i++) {
-        res->data[i] = a->data[i] * b->data[i];
-    }
+    Array* afinal = __broadcastArray__(a, res_shape, res_ndim);
+    Array* bfinal = __broadcastArray__(b, res_shape, res_ndim);
+
+    Array* res = __PmulArrays__(afinal, bfinal);
+
+    smCleanup(afinal); smCleanup(bfinal);
+    free(res_shape);
 
     return res;
 }
@@ -541,15 +558,24 @@ int main() {
     // new random values 
     srand(time(NULL));
 
-    const int b_shape[] = {2, 3, 5};
-    fprintf(stdout, "Creating random Array...\n\n");
+    const int a_shape[] = {3};
+    const int b_shape[] = {2, 3};
 
-    Array* b = smRandom(b_shape, 3);
-    Array* bT = smTransposeNew(b, NULL);
+    Array* a = smRandom(a_shape, 1);
+    Array* b = smRandom(b_shape, 2);
 
-    smShow(bT);
-    smPrintInfo(bT);
+    printf("Array a:\n");
+    smShow(a);
 
-    smCleanup(b); smCleanup(bT);
+    printf("Array b:\n");
+    smShow(b);
+
+    printf("\nAdd and transpose:\n");
+    Array* final = smTransposeNew(smAdd(a, b), NULL);
+
+    smShow(final);
+    smPrintInfo(final);
+
+    smCleanup(a); smCleanup(b); smCleanup(final);
     return 0;
 }
