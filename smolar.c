@@ -204,6 +204,40 @@ Array* smRandom(const int* shape, int ndim) {
 }
 
 /*
+similar to numpy's arange
+*/
+Array* smArange(float start, float end, float step) {
+    if(start >= end) {
+        fprintf(stderr, "Start value should not be greater than or equal to end value.\n");
+        exit(1);
+    }
+    if(step <= 0) {
+        fprintf(stderr, "Step value should not be less than or equal to 0.\n");
+        exit(1);
+    }
+
+    // length of result array
+    int _len = 0;
+    float curr = start;
+    while(curr < end) {
+        curr += step;
+        _len++;
+    }
+
+    int res_shape[] = {_len};
+    int ndim = 1;
+
+    Array* res = smCreate(res_shape, ndim);
+    curr = start;
+    for(int i=0; i<res->totalsize; i++) {
+        res->data[i] = curr;
+        curr += step;
+    }
+
+    return res;
+}
+
+/*
 show the shape/strides/backstrides of an Array 
 as a python tuple for each dimension: `(n, m, k, ...)`
 */
@@ -522,6 +556,31 @@ Array* smAdd(Array* a, Array* b) {
 }
 
 /*
+-1 * arr->data
+*/
+Array* __PnegArray__(Array* arr) {
+    Array* res = smCreate(arr->shape, arr->ndim);
+    
+    for(int i=0; i<res->totalsize; i++) {
+        res->data[i] = -1 * arr->data[i];
+    }
+
+    return res;
+}
+
+/*
+this is basically a + (-1 * b) elementwise
+*/
+Array* __PsubArrays__(Array* a, Array* b) {
+    Array* bneg = __PnegArray__(b);
+
+    Array* res = smAdd(a, bneg);
+
+    smCleanup(bneg);
+    return res;
+}
+
+/*
 multiply the elements of two Arrays elementwise
 for now, assume shapes of both are same
 
@@ -558,24 +617,13 @@ int main() {
     // new random values 
     srand(time(NULL));
 
-    const int a_shape[] = {3};
-    const int b_shape[] = {2, 3};
+    const int shape[] = {2, 3, 2};
+    Array* a = smReshapeNew(smArange(1, 13, 1), shape, 3);
 
-    Array* a = smRandom(a_shape, 1);
-    Array* b = smRandom(b_shape, 2);
-
-    printf("Array a:\n");
     smShow(a);
+    smPrintInfo(a);
 
-    printf("Array b:\n");
-    smShow(b);
+    smCleanup(a);
 
-    printf("\nAdd and transpose:\n");
-    Array* final = smTransposeNew(smAdd(a, b), NULL);
-
-    smShow(final);
-    smPrintInfo(final);
-
-    smCleanup(a); smCleanup(b); smCleanup(final);
     return 0;
 }
