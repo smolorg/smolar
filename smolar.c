@@ -617,13 +617,17 @@ int main() {
     // new random values 
     srand(time(NULL));
 
-    const int shape[] = {2, 3, 2};
-    Array* a = smReshapeNew(smArange(1, 13, 1), shape, 3);
+    const int shape[] = {500, 500};
 
-    smShow(a);
-    smPrintInfo(a);
+    Array* a = smRandom(shape, 2);
+    Array* b = smRandom(shape, 2);
 
-    smCleanup(a);
+    Array* res = smAdd(a, b);
+
+    smPrintInfo(res);
+
+    smCleanup(a); smCleanup(b);
+    smCleanup(res);
 
     return 0;
 }
