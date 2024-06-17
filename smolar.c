@@ -509,27 +509,23 @@ can be parallelized.
 Array* __PaddArrays__(Array* a, Array* b) {
     Array* res = smCreate(a->shape, a->ndim);
 
-    for(int i=0; i<a->totalsize; i++) {
-        res->data[i] = a->data[i] + b->data[i];
-    }
-
-    return res;
-}
-
-Array* parallelAddArrays(Array* a, Array* b) {
-    Array* res = smCreate(a->shape, a->ndim);
-
+    #ifdef PARALLEL
     #pragma omp parallel for
+    #endif
     for(int i=0; i<a->totalsize; i++) {
         res->data[i] = a->data[i] + b->data[i];
     }
 
     return res;
 }
+
 
 Array* __PmulArrays__(Array* a, Array* b) {
     Array* res = smCreate(a->shape, a->ndim);
 
+    #ifdef PARALLEL
+    #pragma omp parallel for
+    #endif
     for(int i=0; i<a->totalsize; i++) {
         res->data[i] = a->data[i] * b->data[i];
     }
@@ -574,6 +570,9 @@ Array* smAdd(Array* a, Array* b) {
 Array* __PnegArray__(Array* arr) {
     Array* res = smCreate(arr->shape, arr->ndim);
     
+    #ifdef PARALLEL
+    #pragma omp parallel for
+    #endif
     for(int i=0; i<res->totalsize; i++) {
         res->data[i] = -1 * arr->data[i];
     }
@@ -630,7 +629,7 @@ int main() {
     // new random values 
     srand(time(NULL));
 
-    const int shape[] = {20000, 20000};
+    const int shape[] = {10000, 10000};
 
     Array* a = smRandom(shape, 2);
     Array* b = smRandom(shape, 2);
@@ -643,16 +642,6 @@ int main() {
 
     for (int i = 0; i < res->totalsize; i++) {
         assert(res->data[i] == a->data[i] + b->data[i]);
-    }
-
-    start = omp_get_wtime();
-    Array* res_par = parallelAddArrays(a, b);
-    end = omp_get_wtime();
-
-    printf("parallelAddArrays: %.3f\n", end - start);
-
-    for (int i = 0; i < res_par->totalsize; i++) {
-        assert(res_par->data[i] == a->data[i] + b->data[i]);
     }
 
     smPrintInfo(res);

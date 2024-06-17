@@ -23,6 +23,13 @@ To compile and run this file using clang compiler:
 ```shell
 $ clang smolar.c -o smolar
 $ ./smolar
+
+```gcc compilation
+$ gcc smolar.c -o smolar -fopenmp  //for no parallelization
+$ ./smolar
+
+$ gcc smolar.c -o smolar -fopenmp -DPARALLEL  //for parallelization
+$ ./smolar
 ```
 
 ### Current progress
