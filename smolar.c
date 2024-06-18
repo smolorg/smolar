@@ -26,6 +26,7 @@ one thing to note here is every Array has only `float` dtype
 #include <assert.h>
 #include <omp.h>
 
+typedef float (*ArrayFunc)(float);
 // our hero
 typedef struct {
     float* data;        // holds the actual data in continuous way
@@ -41,6 +42,7 @@ typedef struct {
     bool C_ORDER;       // flag if array is c-order
     bool F_ORDER;       // flag if array is f-order
 } Array;
+
 
 /*
 free all the memory allocated by an Array
@@ -198,6 +200,9 @@ random array from shape, values will be in range `[0.0, 1.0]`
 Array* smRandom(const int* shape, int ndim) {
     Array* arr = smCreate(shape, ndim);
 
+    #ifdef PARALLEL
+    #pragma omp parallel for
+    #endif
     for(int i=0; i<arr->totalsize; i++) {
         arr->data[i] = _getrandomFloat(0.f, 1.f);
     }
@@ -624,12 +629,29 @@ Array* smMul(Array* a, Array* b) {
     return res;
 }
 
+Array* smApply(Array *arr, ArrayFunc func) {
+    Array* res = smCreate(arr->shape, arr->ndim);
+    
+    #ifdef PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(int i=0; i<res->totalsize; i++) {
+        res->data[i] = func(arr->data[i]);
+    }
+
+    return res;
+}
+
+float square(float x) {
+    return x * x;
+}
+
 
 int main() {
     // new random values 
     srand(time(NULL));
 
-    const int shape[] = {10000, 10000};
+    const int shape[] = {5000, 5000};
 
     Array* a = smRandom(shape, 2);
     Array* b = smRandom(shape, 2);
@@ -640,8 +662,21 @@ int main() {
 
     printf("smAdd: %.3f\n", end - start);
 
+    #pragma omp parallel for
     for (int i = 0; i < res->totalsize; i++) {
         assert(res->data[i] == a->data[i] + b->data[i]);
+    }  
+
+
+    start = omp_get_wtime();
+    Array* res2 = smApply(res, square);
+    end = omp_get_wtime();
+
+    printf("smApply: %.3f\n", end - start);
+
+    #pragma omp parallel for
+    for (int i = 0; i < res2->totalsize; i++) {
+        assert(res2->data[i] == square(res->data[i]));
     }
 
     smPrintInfo(res);
