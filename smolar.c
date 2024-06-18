@@ -629,17 +629,17 @@ Array* smMul(Array* a, Array* b) {
     return res;
 }
 
-Array* smApply(Array *arr, ArrayFunc func) {
-    Array* res = smCreate(arr->shape, arr->ndim);
+void smApply(Array *arr, ArrayFunc func) {
+    // Array* res = smCreate(arr->shape, arr->ndim);
     
     #ifdef PARALLEL
     #pragma omp parallel for
     #endif
-    for(int i=0; i<res->totalsize; i++) {
-        res->data[i] = func(arr->data[i]);
+    for(int i=0; i<arr->totalsize; i++) {
+        arr->data[i] = func(arr->data[i]);
     }
 
-    return res;
+    // return res;
 }
 
 float square(float x) {
@@ -665,19 +665,24 @@ int main() {
     #pragma omp parallel for
     for (int i = 0; i < res->totalsize; i++) {
         assert(res->data[i] == a->data[i] + b->data[i]);
-    }  
+    } 
 
+    // smShow(res); 
 
+    Array* res_copy = smCreate(res->shape, res->ndim);
+    smFromValues(res_copy, res->data);
     start = omp_get_wtime();
-    Array* res2 = smApply(res, square);
+    smApply(res, square);
     end = omp_get_wtime();
 
     printf("smApply: %.3f\n", end - start);
 
     #pragma omp parallel for
-    for (int i = 0; i < res2->totalsize; i++) {
-        assert(res2->data[i] == square(res->data[i]));
+    for (int i = 0; i < res->totalsize; i++) {
+        assert(res->data[i] == square(res_copy->data[i]));
     }
+
+    // smShow(res);
 
     smPrintInfo(res);
 
