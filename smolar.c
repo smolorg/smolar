@@ -617,15 +617,24 @@ int main() {
     // new random values 
     srand(time(NULL));
 
-    const int shape[] = {500, 500};
+    const int shapea[] = {2, 3};
+    const int shapeb[] = {3};
 
-    Array* a = smRandom(shape, 2);
-    Array* b = smRandom(shape, 2);
-
+    Array* a = smRandom(shapea, 2);
+    Array* b = smRandom(shapeb, 1);
+ 
     Array* res = smAdd(a, b);
 
-    smPrintInfo(res);
+    printf("Array a:\n");
+    smShow(a);
+    printf("Array b:\n");
+    smShow(b);
+    printf("Add result with broadcasting:\n");
+    smShow(res);
 
+    // not actually needed
+    // any modern OS will clean the allocated memory
+    // when the program exits
     smCleanup(a); smCleanup(b);
     smCleanup(res);
 
