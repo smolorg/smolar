@@ -617,26 +617,19 @@ int main() {
     // new random values 
     srand(time(NULL));
 
-    const int shapea[] = {2, 3};
-    const int shapeb[] = {3};
+    clock_t start, end;
+    double cpu_time;
 
-    Array* a = smRandom(shapea, 2);
-    Array* b = smRandom(shapeb, 1);
- 
-    Array* res = smAdd(a, b);
+    // 10,000 x 10,000 array
+    const int shape[] = {1e4, 1e4};
+    Array *a = smRandom(shape, 2);
 
-    printf("Array a:\n");
-    smShow(a);
-    printf("Array b:\n");
-    smShow(b);
-    printf("Add result with broadcasting:\n");
-    smShow(res);
+    start = clock();
+    Array *res = smAdd(a, a);
+    end = clock();
 
-    // not actually needed
-    // any modern OS will clean the allocated memory
-    // when the program exits
-    smCleanup(a); smCleanup(b);
-    smCleanup(res);
+    cpu_time = ((double) (end - start)) / CLOCKS_PER_SEC * 1000;
 
+    printf("\n>> elapsed time: %.5f ms\n\n", cpu_time);
     return 0;
 }
