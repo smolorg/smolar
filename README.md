@@ -23,6 +23,7 @@ To compile and run this file using clang compiler:
 ```shell
 $ clang smolar.c -o smolar
 $ ./smolar
+```
 
 
 ### Current progress
