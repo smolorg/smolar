@@ -653,8 +653,9 @@ int main() {
 
     const int shape[] = {5000, 5000};
 
-    Array* a = smRandom(shape, 2);
-    Array* b = smRandom(shape, 2);
+    // 10,000 x 10,000 array
+    const int shape[] = {1e4, 1e4};
+    Array *a = smRandom(shape, 2);
 
     double start = omp_get_wtime();
     Array* res = smAdd(a, b);
@@ -684,10 +685,7 @@ int main() {
 
     // smShow(res);
 
-    smPrintInfo(res);
 
-    smCleanup(a); smCleanup(b);
-    smCleanup(res);
-
+    printf("\n>> elapsed time: %.5f ms\n\n", cpu_time);
     return 0;
 }
