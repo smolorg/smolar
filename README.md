@@ -25,6 +25,7 @@ $ clang smolar.c -o smolar
 $ ./smolar
 ```
 
+
 ### Current progress
 
 - [x] Define Array structure
