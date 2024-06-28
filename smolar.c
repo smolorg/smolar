@@ -24,6 +24,10 @@ one thing to note here is every Array has only `float` dtype
 #include <string.h>
 #include <time.h>
 
+
+typedef float (*ArrayFunc)(float);
+
+
 // our hero
 typedef struct {
     float* data;        // holds the actual data in continuous way
@@ -612,24 +616,36 @@ Array* smMul(Array* a, Array* b) {
     return res;
 }
 
+/*
+Apply a given ArrayFunc element-wise to the array, inplace
+*/
+void smApplyInplace(Array *arr, ArrayFunc func) {
+    for(int i=0; i<arr->totalsize; i++) {
+        arr->data[i] = func(arr->data[i]);
+    }
+}
+
+// --------------------------------------------------------------
+
+float square(float x) {
+    return x * x;
+}
+
+float cube(float x) {
+    return x * x * x;
+}
+
 
 int main() {
     // new random values 
     srand(time(NULL));
 
-    clock_t start, end;
-    double cpu_time;
-
-    // 10,000 x 10,000 array
-    const int shape[] = {1e4, 1e4};
+    const int shape[] = {100, 100};
     Array *a = smRandom(shape, 2);
 
-    start = clock();
-    Array *res = smAdd(a, a);
-    end = clock();
+    smApplyInplace(a, square);
+    smShow(a);
 
-    cpu_time = ((double) (end - start)) / CLOCKS_PER_SEC * 1000;
-
-    printf("\n>> elapsed time: %.5f ms\n\n", cpu_time);
+    free(a);
     return 0;
 }
