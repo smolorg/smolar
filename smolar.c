@@ -625,6 +625,35 @@ void smApplyInplace(Array *arr, ArrayFunc func) {
     }
 }
 
+Array* __PmatmulArrays__(Array* a, Array* b) {
+    int m, n, p;
+    m = a->shape[a->ndim - 2];
+    n = b->shape[b->ndim - 1];
+    p = a->shape[a->ndim - 1];
+
+    int out_dim = a->ndim;
+    int out_shape[out_dim];
+
+
+    for (int i = 0; i < out_dim - 2; i++) {
+        out_shape[i] = a->shape[i];
+    }
+    out_shape[out_dim - 2] = a->shape[a->ndim - 2];
+    out_shape[out_dim - 1] = b->shape[b->ndim - 1];
+
+    Array* res = smCreate(out_shape, out_dim);
+
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            for (int k = 0; k < p; k++) {
+                res->data[i * n + j] += a->data[i * n + k] * b->data[k * n + j];
+            }
+        }
+    }
+
+    return res;
+}
+
 // --------------------------------------------------------------
 
 float square(float x) {
@@ -638,14 +667,31 @@ float cube(float x) {
 
 int main() {
     // new random values 
-    srand(time(NULL));
+    // srand(time(NULL));
 
-    const int shape[] = {100, 100};
-    Array *a = smRandom(shape, 2);
+    // const int shape[] = {100, 100};
+    // Array *a = smRandom(shape, 2);
 
-    smApplyInplace(a, square);
+    // smApplyInplace(a, square);
+    // smShow(a);
+
+    // free(a);
+
+    const int shapeA[] = {3, 4};
+    const int shapeB[] = {4, 2};
+    Array* a = smRandom(shapeA, 2);
+    Array* b = smRandom(shapeB, 2);
+
     smShow(a);
+    printf("\n");
+    smShow(b);
+    printf("\n");
 
-    free(a);
+    Array* out = __PmatmulArrays__(a, b);
+    smShow(out);
+    printf("\n out shape: %d, %d\n", out->shape[0], out->shape[1]);
+    smCleanup(out);
+
+
     return 0;
 }
