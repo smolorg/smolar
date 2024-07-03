@@ -147,6 +147,39 @@ void __recalculateBackstrides__(Array* arr) {
     }
 }
 
+ArrayIndices* __getArrayIndicesFromShape__(const int* shape, int ndim) {
+    ArrayIndices* idxs = (ArrayIndices*)malloc(sizeof(ArrayIndices));
+    _checkNull(idxs);
+
+    int totalsize = 1;
+    for(int i=0; i<ndim; i++) {
+        totalsize *= shape[i];
+    }
+    idxs->count = totalsize;
+    idxs->indices = (int**)malloc(idxs->count * sizeof(int*));
+    _checkNull(idxs->indices);
+
+    for(int i=0; i<idxs->count; i++) {
+        idxs->indices[i] = (int*)malloc(ndim * sizeof(int));
+        _checkNull(idxs->indices[i]);
+    }
+    int* current_index = (int*)calloc(ndim, sizeof(int));
+    for(int i=0; i<idxs->count; i++) {
+        for(int j=0; j<ndim; j++) {
+            idxs->indices[i][j] = current_index[j];
+        }
+        for(int j=ndim-1; j>=0; j--) {
+            if(++current_index[j] < shape[j]) {
+                break;
+            }
+            current_index[j] = 0;
+        }
+    }
+    free(current_index);
+
+    return idxs;
+}
+
 /*
 function to create the arrayIndices
 */
@@ -165,12 +198,11 @@ void __createArrayIndices__(Array* arr) {
     // generate all possible index combinations
     int* current_index = (int*)calloc(arr->ndim, sizeof(int));
     for (int i = 0; i < arr->idxs->count; i++) {
-        // Copy current index to ai->indices[i]
         for (int j = 0; j < arr->ndim; j++) {
             arr->idxs->indices[i][j] = current_index[j];
         }
 
-        // Increment the index
+        // increment the index
         for (int j = arr->ndim - 1; j >= 0; j--) {
             if (++current_index[j] < arr->shape[j]) {
                 break;
@@ -523,6 +555,7 @@ void smReshapeInplace(Array* arr, const int* shape, int ndim) {
 
     __recalculateStrides__(arr);
     __recalculateBackstrides__(arr);
+    __createArrayIndices__(arr);
     __setArrayFlags__(arr);
 }
 
@@ -563,6 +596,7 @@ Array* smTransposeNew(Array* arr, const int* axes) {
     }
     free(newshape); free(newstrides);
     __recalculateBackstrides__(res);
+    __createArrayIndices__(res);
     __setArrayFlags__(res);
 
     free(_axes);
@@ -681,6 +715,90 @@ Array* smMul(Array* a, Array* b) {
 }
 
 /*
+matrix multiplication of n-dimensional arrays.
+```
+for 2D arrays (m, n) @ (n, d) = (m, d)
+for nD arrays (..., m, n) @ (..., n, d) = (..., m, d)
+```
+when the dimensions of arrays are greater than 2, we do N matmuls
+on the last two axes of the operands. These N matmuls will be stacked
+in the shape of the higher dimensions.
+*/
+Array* smMatMul(Array *a, Array *b) {
+    if (a->ndim < 2 || b->ndim < 2) {
+        fprintf(stderr, ">> Error: both arrays must have at least 2 dimensions for matmul.\n");
+        return NULL;
+    }
+    if (a->shape[a->ndim - 1] != b->shape[b->ndim - 2]) {
+        fprintf(stderr, ">> Error: last dimension of first array must match second-last dimension of second array.\n");
+        return NULL;
+    }
+
+    int result_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
+    int* result_shape = (int*)malloc(result_ndim * sizeof(int));
+    
+    // broadcast result shape untill last two axes
+    for (int i = 0; i < result_ndim - 2; i++) {
+        result_shape[i] = (i < a->ndim - 2) ? a->shape[i] : 1;
+        result_shape[i] = (i < b->ndim - 2) ? (result_shape[i] > b->shape[i] ? result_shape[i] : b->shape[i]) : result_shape[i];
+    }
+    result_shape[result_ndim - 2] = a->shape[a->ndim - 2];
+    result_shape[result_ndim - 1] = b->shape[b->ndim - 1];
+
+    Array* result = smCreate(result_shape, result_ndim);
+    free(result_shape);
+
+    int m = a->shape[a->ndim - 2];
+    int n = a->shape[a->ndim - 1];
+    int p = b->shape[b->ndim - 1];
+
+    // total matmuls to perform
+    int last_two = result->shape[result_ndim - 1] * result->shape[result_ndim - 2];
+    int totalops = result->totalsize / last_two;
+
+    ArrayIndices* idxs = __getArrayIndicesFromShape__(result->shape, result_ndim-2);
+
+    for(int idx=0; idx < totalops; idx++) {
+        int* nd_index = idxs->indices[idx];
+
+        // perform matmul for this slice
+        // note: can be parallelized
+        for(int i=0; i < m; i++) {
+            for(int j=0; j < p; j++) {
+                float sum = 0.0f;
+                for(int k=0; k < n; k++) {
+                    // linear 1D index for a and b
+                    int a_index1d = 0, b_index1d = 0;
+
+                    // higher dimensions
+                    for(int d=0; d < a->ndim - 2; d++)
+                        a_index1d += (nd_index[d] * a->strides[d]);
+                    for(int d=0; d < b->ndim - 2; d++)
+                        b_index1d += (nd_index[d] * b->strides[d]);
+
+                    // last 2 dimensions
+                    a_index1d += (i * a->strides[a->ndim - 2] + k * a->strides[a->ndim - 1]);
+                    b_index1d += (k * b->strides[b->ndim - 2] + j * b->strides[b->ndim - 1]);
+
+                    sum += a->data[a_index1d / a->itemsize] * b->data[b_index1d / b->itemsize];
+                }
+
+                // same as a and b, for result
+                int r_index1d = 0;
+                for(int d=0; d < a->ndim - 2; d++)
+                    r_index1d += (nd_index[d] * result->strides[d]);
+                r_index1d += (i * result->strides[result->ndim - 2] + j * result->strides[result->ndim - 1]);
+
+                result->data[r_index1d / result->itemsize] = sum;
+            }
+        }
+    }
+    free(idxs);
+
+    return result;
+}
+
+/*
 Apply a given ArrayFunc element-wise to the array, inplace
 */
 void smApplyInplace(Array *arr, ArrayFunc func) {
@@ -704,14 +822,21 @@ int main() {
     // new random values 
     srand(time(NULL));
 
-    int shape[] = {3, 2, 3};
-    int ndim = 3;
+    int shape_a[] = {2, 3, 4};
+    int shape_b[] = {2, 4, 2};
     
-    Array* a = smRandom(shape, ndim);
-    
-    printf("Generated indices:\n");
-    printArrayIndices(a);
+    Array* a = smReshapeNew(smArange(1, 25, 1), shape_a, 3);
+    Array* b = smReshapeNew(smArange(1, 17, 1), shape_b, 3);
 
-    smCleanup(a);
+    Array* res = smMatMul(a, b);
+
+    printf("Array a:\n");
+    smShow(a);
+    printf("Array b:\n");
+    smShow(b);
+    printf("\nMatmul result:\n");
+    smShow(res);
+
+    smCleanup(a); smCleanup(b); smCleanup(res);
     return 0;
 }
