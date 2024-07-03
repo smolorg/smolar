@@ -1,7 +1,7 @@
 /*
 smolar - a tiny multidimensional array library in just one file
 
-well, it is obvious this file will contain A LOT but there are some naming 
+well, it is obvious this file will contain A LOT but there are some naming
 conventions that i follow here (i try):
 
 Array:
@@ -24,44 +24,46 @@ one thing to note here is every Array has only `float` dtype
 #include <string.h>
 #include <time.h>
 
-
 typedef float (*ArrayFunc)(float);
 
-
 // struct to hold all nD indices of the array
-typedef struct {
-    int** indices;  // 2D array to hold all possible index combinations
-    int count;      // total number of index combinations
+typedef struct
+{
+    int **indices; // 2D array to hold all possible index combinations
+    int count;     // total number of index combinations
 } ArrayIndices;
 
 // our hero
-typedef struct {
-    float* data;        // holds the actual data in continuous way
+typedef struct
+{
+    float *data; // holds the actual data in continuous way
 
-    int* shape;         // shape of the array
-    int* strides;       // number of bytes to skip for each dimension
-    int* backstrides;   // reverse of strides; how many bytes to skip to go reverse
+    int *shape;       // shape of the array
+    int *strides;     // number of bytes to skip for each dimension
+    int *backstrides; // reverse of strides; how many bytes to skip to go reverse
 
-    int ndim;           // number of dimensions
-    int itemsize;       // size of one element in the array
-    int totalsize;      // total size to allocate
+    int ndim;      // number of dimensions
+    int itemsize;  // size of one element in the array
+    int totalsize; // total size to allocate
 
-    ArrayIndices* idxs; // n-dimensional indices
+    ArrayIndices *idxs; // n-dimensional indices
 
-    bool C_ORDER;       // flag if array is c-order
-    bool F_ORDER;       // flag if array is f-order
+    bool C_ORDER; // flag if array is c-order
+    bool F_ORDER; // flag if array is f-order
 } Array;
 
 /*
 free all the memory allocated by an Array
 */
-void smCleanup(Array* arr) {
+void smCleanup(Array *arr)
+{
     free(arr->data);
     free(arr->shape);
     free(arr->strides);
     free(arr->backstrides);
     // clean up indices
-    for (int i = 0; i < arr->idxs->count; i++) {
+    for (int i = 0; i < arr->idxs->count; i++)
+    {
         free(arr->idxs->indices[i]);
     }
     free(arr->idxs->indices);
@@ -69,15 +71,15 @@ void smCleanup(Array* arr) {
     free(arr);
 }
 
-
 // ------------------- Utility functions --------------------
-
 
 /*
 takes in a float* or int* and checks if that is null.
 */
-void _checkNull(void* value) {
-    if(value == NULL) {
+void _checkNull(void *value)
+{
+    if (value == NULL)
+    {
         fprintf(stderr, "Memory allocation failed!\n");
         exit(1);
     }
@@ -92,38 +94,41 @@ and the distribution of the random numbers generated won't be entirely uniform
 
 more here: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator
 */
-float _getrandomFloat(float min, float max) {
+float _getrandomFloat(float min, float max)
+{
     return min + ((float)rand() / RAND_MAX) * (max - min);
 }
 
-int _getRandomInt(int min, int max) {
+int _getRandomInt(int min, int max)
+{
     return min + rand() % (max + 1 - min);
 }
 
-
 // ----------------- Required Array functions ------------------
-
 
 /*
 set C-order flag for an array
 */
-void __checkOrderC__(Array* arr) {
-    bool val = (arr->strides[arr->ndim - 1] == arr->itemsize) ? true: false;
+void __checkOrderC__(Array *arr)
+{
+    bool val = (arr->strides[arr->ndim - 1] == arr->itemsize) ? true : false;
     arr->C_ORDER = val;
 }
 
 /*
 set F-order flag for an array
 */
-void __checkOrderF__(Array* arr) {
-    bool val = (arr->strides[0] == arr->itemsize) ? true: false;
+void __checkOrderF__(Array *arr)
+{
+    bool val = (arr->strides[0] == arr->itemsize) ? true : false;
     arr->F_ORDER = val;
 }
 
 /*
 set flags for array
 */
-void __setArrayFlags__(Array* arr) {
+void __setArrayFlags__(Array *arr)
+{
     __checkOrderC__(arr);
     __checkOrderF__(arr);
 }
@@ -131,9 +136,11 @@ void __setArrayFlags__(Array* arr) {
 /*
 (re)calculate strides given a new shape
 */
-void __recalculateStrides__(Array* arr) {
+void __recalculateStrides__(Array *arr)
+{
     arr->strides[arr->ndim - 1] = arr->itemsize;
-    for(int i = arr->ndim - 2; i >= 0; i--) {
+    for (int i = arr->ndim - 2; i >= 0; i--)
+    {
         arr->strides[i] = arr->strides[i + 1] * arr->shape[i + 1];
     }
 }
@@ -141,35 +148,44 @@ void __recalculateStrides__(Array* arr) {
 /*
 (re)calculate backstrides for an Array
 */
-void __recalculateBackstrides__(Array* arr) {
-    for(int i = arr->ndim - 1; i >= 0; i--) {
+void __recalculateBackstrides__(Array *arr)
+{
+    for (int i = arr->ndim - 1; i >= 0; i--)
+    {
         arr->backstrides[i] = -1 * arr->strides[i] * (arr->shape[i] - 1);
     }
 }
 
-ArrayIndices* __getArrayIndicesFromShape__(const int* shape, int ndim) {
-    ArrayIndices* idxs = (ArrayIndices*)malloc(sizeof(ArrayIndices));
+ArrayIndices *__getArrayIndicesFromShape__(const int *shape, int ndim)
+{
+    ArrayIndices *idxs = (ArrayIndices *)malloc(sizeof(ArrayIndices));
     _checkNull(idxs);
 
     int totalsize = 1;
-    for(int i=0; i<ndim; i++) {
+    for (int i = 0; i < ndim; i++)
+    {
         totalsize *= shape[i];
     }
     idxs->count = totalsize;
-    idxs->indices = (int**)malloc(idxs->count * sizeof(int*));
+    idxs->indices = (int **)malloc(idxs->count * sizeof(int *));
     _checkNull(idxs->indices);
 
-    for(int i=0; i<idxs->count; i++) {
-        idxs->indices[i] = (int*)malloc(ndim * sizeof(int));
+    for (int i = 0; i < idxs->count; i++)
+    {
+        idxs->indices[i] = (int *)malloc(ndim * sizeof(int));
         _checkNull(idxs->indices[i]);
     }
-    int* current_index = (int*)calloc(ndim, sizeof(int));
-    for(int i=0; i<idxs->count; i++) {
-        for(int j=0; j<ndim; j++) {
+    int *current_index = (int *)calloc(ndim, sizeof(int));
+    for (int i = 0; i < idxs->count; i++)
+    {
+        for (int j = 0; j < ndim; j++)
+        {
             idxs->indices[i][j] = current_index[j];
         }
-        for(int j=ndim-1; j>=0; j--) {
-            if(++current_index[j] < shape[j]) {
+        for (int j = ndim - 1; j >= 0; j--)
+        {
+            if (++current_index[j] < shape[j])
+            {
                 break;
             }
             current_index[j] = 0;
@@ -183,28 +199,34 @@ ArrayIndices* __getArrayIndicesFromShape__(const int* shape, int ndim) {
 /*
 function to create the arrayIndices
 */
-void __createArrayIndices__(Array* arr) {
-    arr->idxs = (ArrayIndices*)malloc(sizeof(ArrayIndices));
+void __createArrayIndices__(Array *arr)
+{
+    arr->idxs = (ArrayIndices *)malloc(sizeof(ArrayIndices));
     _checkNull(arr->idxs);
     arr->idxs->count = arr->totalsize;
-    arr->idxs->indices = (int**)malloc(arr->idxs->count * sizeof(int*));
+    arr->idxs->indices = (int **)malloc(arr->idxs->count * sizeof(int *));
     _checkNull(arr->idxs->indices);
 
-    for (int i=0; i<arr->idxs->count; i++) {
-        arr->idxs->indices[i] = (int*)malloc(arr->ndim * sizeof(int));
+    for (int i = 0; i < arr->idxs->count; i++)
+    {
+        arr->idxs->indices[i] = (int *)malloc(arr->ndim * sizeof(int));
         _checkNull(arr->idxs->indices[i]);
     }
 
     // generate all possible index combinations
-    int* current_index = (int*)calloc(arr->ndim, sizeof(int));
-    for (int i = 0; i < arr->idxs->count; i++) {
-        for (int j = 0; j < arr->ndim; j++) {
+    int *current_index = (int *)calloc(arr->ndim, sizeof(int));
+    for (int i = 0; i < arr->idxs->count; i++)
+    {
+        for (int j = 0; j < arr->ndim; j++)
+        {
             arr->idxs->indices[i][j] = current_index[j];
         }
 
         // increment the index
-        for (int j = arr->ndim - 1; j >= 0; j--) {
-            if (++current_index[j] < arr->shape[j]) {
+        for (int j = arr->ndim - 1; j >= 0; j--)
+        {
+            if (++current_index[j] < arr->shape[j])
+            {
                 break;
             }
             current_index[j] = 0;
@@ -215,12 +237,16 @@ void __createArrayIndices__(Array* arr) {
 }
 
 // helper function to print ArrayIndices (for debugging)
-void printArrayIndices(Array* arr) {
-    for (int i = 0; i < arr->idxs->count; i++) {
+void printArrayIndices(Array *arr)
+{
+    for (int i = 0; i < arr->idxs->count; i++)
+    {
         printf("{");
-        for (int j = 0; j < arr->ndim; j++) {
+        for (int j = 0; j < arr->ndim; j++)
+        {
             printf("%d", arr->idxs->indices[i][j]);
-            if (j < arr->ndim - 1) {
+            if (j < arr->ndim - 1)
+            {
                 printf(", ");
             }
         }
@@ -232,26 +258,31 @@ void printArrayIndices(Array* arr) {
 assume that the shape and number of dims are given,
 create a new Array from that.
 */
-Array* smCreate(const int* shape, int ndim) {
-    if(ndim <= 0) {
+Array *smCreate(const int *shape, int ndim)
+{
+    if (ndim <= 0)
+    {
         fprintf(stderr, "Cannot initialize Array of dimensions %d", ndim);
         exit(1);
     }
 
-    Array* arr = (Array*)malloc(sizeof(Array));
+    Array *arr = (Array *)malloc(sizeof(Array));
     _checkNull(arr);
 
     arr->ndim = ndim;
-    arr->shape = (int*)malloc(arr->ndim * sizeof(int));
-    arr->strides = (int*)malloc(arr->ndim * sizeof(int));
-    arr->backstrides = (int*)malloc(arr->ndim * sizeof(int));
+    arr->shape = (int *)malloc(arr->ndim * sizeof(int));
+    arr->strides = (int *)malloc(arr->ndim * sizeof(int));
+    arr->backstrides = (int *)malloc(arr->ndim * sizeof(int));
 
-    _checkNull(arr->shape); _checkNull(arr->strides); _checkNull(arr->backstrides);
+    _checkNull(arr->shape);
+    _checkNull(arr->strides);
+    _checkNull(arr->backstrides);
 
     arr->itemsize = sizeof(float);
     arr->totalsize = 1;
 
-    for(int i=0; i<arr->ndim; i++) {
+    for (int i = 0; i < arr->ndim; i++)
+    {
         arr->shape[i] = shape[i];
         arr->totalsize *= shape[i];
     }
@@ -265,15 +296,17 @@ Array* smCreate(const int* shape, int ndim) {
     __setArrayFlags__(arr);
 
     // allocate data
-    arr->data = (float*)malloc(arr->totalsize * arr->itemsize);
+    arr->data = (float *)malloc(arr->totalsize * arr->itemsize);
     _checkNull(arr->data);
 
     return arr;
 }
 
-bool __checkShapeCompatible__(Array* arr, const int* shape, int ndim) {
+bool __checkShapeCompatible__(Array *arr, const int *shape, int ndim)
+{
     int size_new = 1;
-    for(int i=0; i<ndim; i++) {
+    for (int i = 0; i < ndim; i++)
+    {
         size_new *= shape[i];
     }
 
@@ -284,8 +317,10 @@ bool __checkShapeCompatible__(Array* arr, const int* shape, int ndim) {
 initialize the Array's data with values (has to be 1D in memory)
 assume values length the same as Array's totalsize
 */
-void smFromValues(Array* arr, float* values) {
-    for(int i=0; i<arr->totalsize; i++) {
+void smFromValues(Array *arr, float *values)
+{
+    for (int i = 0; i < arr->totalsize; i++)
+    {
         arr->data[i] = values[i];
     }
 }
@@ -293,10 +328,12 @@ void smFromValues(Array* arr, float* values) {
 /*
 random array from shape, values will be in range `[0.0, 1.0]`
 */
-Array* smRandom(const int* shape, int ndim) {
-    Array* arr = smCreate(shape, ndim);
+Array *smRandom(const int *shape, int ndim)
+{
+    Array *arr = smCreate(shape, ndim);
 
-    for(int i=0; i<arr->totalsize; i++) {
+    for (int i = 0; i < arr->totalsize; i++)
+    {
         arr->data[i] = _getrandomFloat(0.f, 1.f);
     }
 
@@ -306,12 +343,15 @@ Array* smRandom(const int* shape, int ndim) {
 /*
 similar to numpy's arange
 */
-Array* smArange(float start, float end, float step) {
-    if(start >= end) {
+Array *smArange(float start, float end, float step)
+{
+    if (start >= end)
+    {
         fprintf(stderr, "Start value should not be greater than or equal to end value.\n");
         exit(1);
     }
-    if(step <= 0) {
+    if (step <= 0)
+    {
         fprintf(stderr, "Step value should not be less than or equal to 0.\n");
         exit(1);
     }
@@ -319,7 +359,8 @@ Array* smArange(float start, float end, float step) {
     // length of result array
     int _len = 0;
     float curr = start;
-    while(curr < end) {
+    while (curr < end)
+    {
         curr += step;
         _len++;
     }
@@ -327,9 +368,10 @@ Array* smArange(float start, float end, float step) {
     int res_shape[] = {_len};
     int ndim = 1;
 
-    Array* res = smCreate(res_shape, ndim);
+    Array *res = smCreate(res_shape, ndim);
     curr = start;
-    for(int i=0; i<res->totalsize; i++) {
+    for (int i = 0; i < res->totalsize; i++)
+    {
         res->data[i] = curr;
         curr += step;
     }
@@ -338,22 +380,29 @@ Array* smArange(float start, float end, float step) {
 }
 
 /*
-show the shape/strides/backstrides of an Array 
+show the shape/strides/backstrides of an Array
 as a python tuple for each dimension: `(n, m, k, ...)`
 */
-void __printArrayInternals__(Array* arr, int* s) {
-    for(int i=0; i<arr->ndim; i++) {
-        if(i == 0) fprintf(stdout, "( ");
+void __printArrayInternals__(Array *arr, int *s)
+{
+    for (int i = 0; i < arr->ndim; i++)
+    {
+        if (i == 0)
+            fprintf(stdout, "( ");
 
-        if(i == arr->ndim - 1)  fprintf(stdout, "%d )", s[i]);
-        else    fprintf(stdout, "%d, ", s[i]);
+        if (i == arr->ndim - 1)
+            fprintf(stdout, "%d )", s[i]);
+        else
+            fprintf(stdout, "%d, ", s[i]);
     }
     fprintf(stdout, "\n");
 }
 
 // Array's data as it is laid out in memory
-void __printArrayData__(Array* arr) {
-    for(int i=0; i<arr->totalsize; i++) {
+void __printArrayData__(Array *arr)
+{
+    for (int i = 0; i < arr->totalsize; i++)
+    {
         fprintf(stdout, "%.3f ", arr->data[i]);
     }
 
@@ -362,26 +411,29 @@ void __printArrayData__(Array* arr) {
 /*
 prints the array info: shape, strides, order of Array (C or F)
 */
-void smPrintInfo(Array* arr) {
+void smPrintInfo(Array *arr)
+{
     fprintf(stdout, "Shape: ");
     __printArrayInternals__(arr, arr->shape);
     fprintf(stdout, "Strides: ");
     __printArrayInternals__(arr, arr->strides);
-    fprintf(stdout, "Array is C-contiguous? %s\n", arr->C_ORDER ? "true": "false");
-    fprintf(stdout, "Array is F-contiguous? %s\n", arr->F_ORDER ? "true": "false");
+    fprintf(stdout, "Array is C-contiguous? %s\n", arr->C_ORDER ? "true" : "false");
+    fprintf(stdout, "Array is F-contiguous? %s\n", arr->F_ORDER ? "true" : "false");
 }
 
 // recursive helper
-char* __traverseHelper__(
-    char* curr, int* shape, int* strides, int* backstrides, 
-    int ndim, int depth
-) {
+char *__traverseHelper__(
+    char *curr, int *shape, int *strides, int *backstrides,
+    int ndim, int depth)
+{
     // we are at the last dimension
-    if(depth == ndim - 1) {
-        fprintf(stdout, "%.3f ", *(float*)curr);
-        for(int i=0; i<shape[ndim-1] - 1; i++) {
+    if (depth == ndim - 1)
+    {
+        fprintf(stdout, "%.3f ", *(float *)curr);
+        for (int i = 0; i < shape[ndim - 1] - 1; i++)
+        {
             curr += strides[ndim - 1];
-            fprintf(stdout, "%.3f ", *(float*)curr);
+            fprintf(stdout, "%.3f ", *(float *)curr);
         }
 
         // backstep
@@ -391,14 +443,15 @@ char* __traverseHelper__(
     }
 
     curr = __traverseHelper__(curr, shape, strides, backstrides, ndim, depth + 1);
-    for(int i=0; i<shape[depth] - 1; i++) {
+    for (int i = 0; i < shape[depth] - 1; i++)
+    {
         curr += strides[depth];
         curr = __traverseHelper__(curr, shape, strides, backstrides, ndim, depth + 1);
     }
-    
+
     curr += backstrides[depth];
 
-    if(depth != 0)
+    if (depth != 0)
         printf("\n");
 
     return curr;
@@ -407,16 +460,14 @@ char* __traverseHelper__(
 /*
 traverse array according to backstrides and execute a printf on each element
 */
-void smShow(Array* arr) {
-    char* curr = (char*)arr->data;
+void smShow(Array *arr)
+{
+    char *curr = (char *)arr->data;
 
     curr = __traverseHelper__(
         curr, arr->shape, arr->strides, arr->backstrides,
-        arr->ndim, 0
-    );
+        arr->ndim, 0);
 }
-
-
 
 // ------------------- Operations with Arrays -------------------
 
@@ -424,14 +475,18 @@ void smShow(Array* arr) {
 - ndim should be equal
 - each element in the shape should be equal
 */
-int smCheckShapesEqual(Array* a, Array* b) {
+int smCheckShapesEqual(Array *a, Array *b)
+{
     int equal = 1;
-    
-    if (a->ndim != b->ndim) equal = 0;
 
-    else {
-        for(int i=0; i<a->ndim; i++)
-            if(a->shape[i] != b->shape[i]) {
+    if (a->ndim != b->ndim)
+        equal = 0;
+
+    else
+    {
+        for (int i = 0; i < a->ndim; i++)
+            if (a->shape[i] != b->shape[i])
+            {
                 equal = 0;
                 break;
             }
@@ -446,23 +501,28 @@ performing broadcasting (if needed) between any two Arrays.
 
 returns `NULL` if shapes aren't broadcastable
 */
-int* __broadcastFinalShape__(Array* a, Array* b) {
-    if(smCheckShapesEqual(a, b)) return a->shape;
+int *__broadcastFinalShape__(Array *a, Array *b)
+{
+    if (smCheckShapesEqual(a, b))
+        return a->shape;
 
-    int res_ndim = (a->ndim > b->ndim) ? a->ndim: b->ndim;
+    int res_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
 
     // left's 1s to prepend
     int l1add = res_ndim - a->ndim;
     int r1add = res_ndim - b->ndim;
 
     int lf_shape[res_ndim], rf_shape[res_ndim];
-    int* res_shape = (int*)malloc(res_ndim * sizeof(int));
+    int *res_shape = (int *)malloc(res_ndim * sizeof(int));
 
     // a
     int inda = 0;
-    for(int i = 0; i<res_ndim; i++) {
-        if(i < l1add) lf_shape[i] = 1;
-        else {
+    for (int i = 0; i < res_ndim; i++)
+    {
+        if (i < l1add)
+            lf_shape[i] = 1;
+        else
+        {
             lf_shape[i] = a->shape[inda];
             inda++;
         }
@@ -470,24 +530,27 @@ int* __broadcastFinalShape__(Array* a, Array* b) {
 
     // b
     int indb = 0;
-    for(int i = 0; i<res_ndim; i++) {
-        if(i < r1add) rf_shape[i] = 1;
-        else {
+    for (int i = 0; i < res_ndim; i++)
+    {
+        if (i < r1add)
+            rf_shape[i] = 1;
+        else
+        {
             rf_shape[i] = b->shape[indb];
             indb++;
         }
     }
 
-    for(int i=0; i<res_ndim; i++) {
-        if(lf_shape[i] == 1 || rf_shape[i] == 1 || lf_shape[i] == rf_shape[i])
-            res_shape[i] = (lf_shape[i] > rf_shape[i]) ? lf_shape[i]: rf_shape[i];
+    for (int i = 0; i < res_ndim; i++)
+    {
+        if (lf_shape[i] == 1 || rf_shape[i] == 1 || lf_shape[i] == rf_shape[i])
+            res_shape[i] = (lf_shape[i] > rf_shape[i]) ? lf_shape[i] : rf_shape[i];
         else
             return NULL;
     }
 
     return res_shape;
 }
-
 
 /*
 broadcasts an array given a new shape and its dimensions.
@@ -497,21 +560,24 @@ is "broadcastable" to the new shape.
 
 if you use this function, you will have to manually free the result of broadcasted array
 */
-Array* __broadcastArray__(Array* arr, const int* shape, int ndim) {
-    Array* res = smCreate(shape, ndim);
+Array *__broadcastArray__(Array *arr, const int *shape, int ndim)
+{
+    Array *res = smCreate(shape, ndim);
 
     bool do_copy = (res->totalsize == arr->totalsize) ? false : true;
 
-    if(!do_copy) 
+    if (!do_copy)
         smFromValues(res, arr->data);
-    else {
-        // resultant totalsize of broadcasting one Array (if possible) 
+    else
+    {
+        // resultant totalsize of broadcasting one Array (if possible)
         // will always be a multiple of original Array's totalsize
         // example: (3, ) and (2, 2, 3)
         // when the index reaches the original array's boundary, wrap around to 0
 
         int boundary = arr->totalsize;
-        for(int i=0; i<res->totalsize; i++) {
+        for (int i = 0; i < res->totalsize; i++)
+        {
             res->data[i] = arr->data[i % boundary];
         }
     }
@@ -522,14 +588,16 @@ Array* __broadcastArray__(Array* arr, const int* shape, int ndim) {
 /*
 reshape an Array to new shape and new ndim
 */
-Array* smReshapeNew(Array* arr, const int* shape, int ndim) {
+Array *smReshapeNew(Array *arr, const int *shape, int ndim)
+{
     bool possible = __checkShapeCompatible__(arr, shape, ndim);
-    if(!possible) {
+    if (!possible)
+    {
         fprintf(stderr, "Cannot reshape due to invalid shape.\n");
         exit(1);
     }
 
-    Array* res = smCreate(shape, ndim);
+    Array *res = smCreate(shape, ndim);
     smFromValues(res, arr->data);
 
     return res;
@@ -541,15 +609,18 @@ inplace reshape operation
 this will just change the shape and strides of the Array.
 the underlying data in the memory is not touched.
 */
-void smReshapeInplace(Array* arr, const int* shape, int ndim) {
+void smReshapeInplace(Array *arr, const int *shape, int ndim)
+{
     bool possible = __checkShapeCompatible__(arr, shape, ndim);
-    if(!possible) {
+    if (!possible)
+    {
         fprintf(stderr, "Cannot reshape due to invalid shape.\n");
         exit(1);
     }
 
     arr->ndim = ndim;
-    for(int i=0; i<ndim; i++) {
+    for (int i = 0; i < ndim; i++)
+    {
         arr->shape[i] = shape[i];
     }
 
@@ -563,9 +634,11 @@ void smReshapeInplace(Array* arr, const int* shape, int ndim) {
 transpose an Array along given permutation of axes
 assume axes is a valid permutation
 */
-Array* smTransposeNew(Array* arr, const int* axes) {
-    Array* res = smCreate(arr->shape, arr->ndim);
-    if(arr->ndim == 1) {
+Array *smTransposeNew(Array *arr, const int *axes)
+{
+    Array *res = smCreate(arr->shape, arr->ndim);
+    if (arr->ndim == 1)
+    {
         smFromValues(res, arr->data);
         return res;
     }
@@ -573,28 +646,34 @@ Array* smTransposeNew(Array* arr, const int* axes) {
     // set data
     smFromValues(res, arr->data);
 
-    int* _axes = (int*)malloc(res->ndim * sizeof(int));
+    int *_axes = (int *)malloc(res->ndim * sizeof(int));
     _checkNull(_axes);
 
-    if(axes == NULL) {
-        for(int i=0; i < res->ndim; i++) {
+    if (axes == NULL)
+    {
+        for (int i = 0; i < res->ndim; i++)
+        {
             _axes[i] = res->ndim - 1 - i;
         }
     }
 
-    int* newshape = (int*)malloc(res->ndim * sizeof(int));
-    int* newstrides = (int*)malloc(res->ndim * sizeof(int));
-    _checkNull(newshape); _checkNull(newstrides);
+    int *newshape = (int *)malloc(res->ndim * sizeof(int));
+    int *newstrides = (int *)malloc(res->ndim * sizeof(int));
+    _checkNull(newshape);
+    _checkNull(newstrides);
 
-    for(int i=0; i<res->ndim; i++) {
+    for (int i = 0; i < res->ndim; i++)
+    {
         newshape[i] = (axes != NULL) ? arr->shape[axes[i]] : arr->shape[_axes[i]];
         newstrides[i] = (axes != NULL) ? arr->strides[axes[i]] : arr->strides[_axes[i]];
     }
-    for(int i=0; i<res->ndim; i++) {
+    for (int i = 0; i < res->ndim; i++)
+    {
         res->shape[i] = newshape[i];
         res->strides[i] = newstrides[i];
     }
-    free(newshape); free(newstrides);
+    free(newshape);
+    free(newstrides);
     __recalculateBackstrides__(res);
     __createArrayIndices__(res);
     __setArrayFlags__(res);
@@ -606,20 +685,24 @@ Array* smTransposeNew(Array* arr, const int* axes) {
 /*
 can be parallelized.
 */
-Array* __PaddArrays__(Array* a, Array* b) {
-    Array* res = smCreate(a->shape, a->ndim);
+Array *__PaddArrays__(Array *a, Array *b)
+{
+    Array *res = smCreate(a->shape, a->ndim);
 
-    for(int i=0; i<a->totalsize; i++) {
+    for (int i = 0; i < a->totalsize; i++)
+    {
         res->data[i] = a->data[i] + b->data[i];
     }
 
     return res;
 }
 
-Array* __PmulArrays__(Array* a, Array* b) {
-    Array* res = smCreate(a->shape, a->ndim);
+Array *__PmulArrays__(Array *a, Array *b)
+{
+    Array *res = smCreate(a->shape, a->ndim);
 
-    for(int i=0; i<a->totalsize; i++) {
+    for (int i = 0; i < a->totalsize; i++)
+    {
         res->data[i] = a->data[i] * b->data[i];
     }
 
@@ -631,27 +714,30 @@ add the elements of two Arrays elementwise
 if the shapes are not equal but broadcastable,
 then broadcasting will take place.
 */
-Array* smAdd(Array* a, Array* b) {
+Array *smAdd(Array *a, Array *b)
+{
     if (smCheckShapesEqual(a, b))
         return __PaddArrays__(a, b);
 
-    int* res_shape = __broadcastFinalShape__(a, b);
-    
-    if(res_shape == NULL) {
+    int *res_shape = __broadcastFinalShape__(a, b);
+
+    if (res_shape == NULL)
+    {
         fprintf(stderr, "Cannot add Arrays of non-broadcastable shapes.\n");
         exit(1);
     }
 
     // broadcast shapes
     // free broadcasts
-    int res_ndim = (a->ndim > b->ndim) ? a->ndim: b->ndim;
+    int res_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
 
-    Array* afinal = __broadcastArray__(a, res_shape, res_ndim);
-    Array* bfinal = __broadcastArray__(b, res_shape, res_ndim);
+    Array *afinal = __broadcastArray__(a, res_shape, res_ndim);
+    Array *bfinal = __broadcastArray__(b, res_shape, res_ndim);
 
-    Array* res = __PaddArrays__(afinal, bfinal);
+    Array *res = __PaddArrays__(afinal, bfinal);
 
-    smCleanup(afinal); smCleanup(bfinal);
+    smCleanup(afinal);
+    smCleanup(bfinal);
     free(res_shape);
 
     return res;
@@ -660,10 +746,12 @@ Array* smAdd(Array* a, Array* b) {
 /*
 -1 * arr->data
 */
-Array* __PnegArray__(Array* arr) {
-    Array* res = smCreate(arr->shape, arr->ndim);
-    
-    for(int i=0; i<res->totalsize; i++) {
+Array *__PnegArray__(Array *arr)
+{
+    Array *res = smCreate(arr->shape, arr->ndim);
+
+    for (int i = 0; i < res->totalsize; i++)
+    {
         res->data[i] = -1 * arr->data[i];
     }
 
@@ -673,10 +761,11 @@ Array* __PnegArray__(Array* arr) {
 /*
 this is basically a + (-1 * b) elementwise
 */
-Array* __PsubArrays__(Array* a, Array* b) {
-    Array* bneg = __PnegArray__(b);
+Array *__PsubArrays__(Array *a, Array *b)
+{
+    Array *bneg = __PnegArray__(b);
 
-    Array* res = smAdd(a, bneg);
+    Array *res = smAdd(a, bneg);
 
     smCleanup(bneg);
     return res;
@@ -688,27 +777,30 @@ for now, assume shapes of both are same
 
 TODO: implement broadcasting
 */
-Array* smMul(Array* a, Array* b) {
+Array *smMul(Array *a, Array *b)
+{
     if (smCheckShapesEqual(a, b))
         return __PmulArrays__(a, b);
 
-    int* res_shape = __broadcastFinalShape__(a, b);
-    
-    if(res_shape == NULL) {
+    int *res_shape = __broadcastFinalShape__(a, b);
+
+    if (res_shape == NULL)
+    {
         fprintf(stderr, "Cannot multiply Arrays of non-broadcastable shapes.\n");
         exit(1);
     }
 
     // broadcast shapes
     // free broadcasts
-    int res_ndim = (a->ndim > b->ndim) ? a->ndim: b->ndim;
+    int res_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
 
-    Array* afinal = __broadcastArray__(a, res_shape, res_ndim);
-    Array* bfinal = __broadcastArray__(b, res_shape, res_ndim);
+    Array *afinal = __broadcastArray__(a, res_shape, res_ndim);
+    Array *bfinal = __broadcastArray__(b, res_shape, res_ndim);
 
-    Array* res = __PmulArrays__(afinal, bfinal);
+    Array *res = __PmulArrays__(afinal, bfinal);
 
-    smCleanup(afinal); smCleanup(bfinal);
+    smCleanup(afinal);
+    smCleanup(bfinal);
     free(res_shape);
 
     return res;
@@ -724,28 +816,32 @@ when the dimensions of arrays are greater than 2, we do N matmuls
 on the last two axes of the operands. These N matmuls will be stacked
 in the shape of the higher dimensions.
 */
-Array* smMatMul(Array *a, Array *b) {
-    if (a->ndim < 2 || b->ndim < 2) {
+Array *smMatMul(Array *a, Array *b)
+{
+    if (a->ndim < 2 || b->ndim < 2)
+    {
         fprintf(stderr, ">> Error: both arrays must have at least 2 dimensions for matmul.\n");
         return NULL;
     }
-    if (a->shape[a->ndim - 1] != b->shape[b->ndim - 2]) {
+    if (a->shape[a->ndim - 1] != b->shape[b->ndim - 2])
+    {
         fprintf(stderr, ">> Error: last dimension of first array must match second-last dimension of second array.\n");
         return NULL;
     }
 
     int result_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
-    int* result_shape = (int*)malloc(result_ndim * sizeof(int));
-    
+    int *result_shape = (int *)malloc(result_ndim * sizeof(int));
+
     // broadcast result shape untill last two axes
-    for (int i = 0; i < result_ndim - 2; i++) {
+    for (int i = 0; i < result_ndim - 2; i++)
+    {
         result_shape[i] = (i < a->ndim - 2) ? a->shape[i] : 1;
         result_shape[i] = (i < b->ndim - 2) ? (result_shape[i] > b->shape[i] ? result_shape[i] : b->shape[i]) : result_shape[i];
     }
     result_shape[result_ndim - 2] = a->shape[a->ndim - 2];
     result_shape[result_ndim - 1] = b->shape[b->ndim - 1];
 
-    Array* result = smCreate(result_shape, result_ndim);
+    Array *result = smCreate(result_shape, result_ndim);
     free(result_shape);
 
     int m = a->shape[a->ndim - 2];
@@ -756,24 +852,28 @@ Array* smMatMul(Array *a, Array *b) {
     int last_two = result->shape[result_ndim - 1] * result->shape[result_ndim - 2];
     int totalops = result->totalsize / last_two;
 
-    ArrayIndices* idxs = __getArrayIndicesFromShape__(result->shape, result_ndim-2);
+    ArrayIndices *idxs = __getArrayIndicesFromShape__(result->shape, result_ndim - 2);
 
-    for(int idx=0; idx < totalops; idx++) {
-        int* nd_index = idxs->indices[idx];
+    for (int idx = 0; idx < totalops; idx++)
+    {
+        int *nd_index = idxs->indices[idx];
 
         // perform matmul for this slice
         // note: can be parallelized
-        for(int i=0; i < m; i++) {
-            for(int j=0; j < p; j++) {
+        for (int i = 0; i < m; i++)
+        {
+            for (int j = 0; j < p; j++)
+            {
                 float sum = 0.0f;
-                for(int k=0; k < n; k++) {
+                for (int k = 0; k < n; k++)
+                {
                     // linear 1D index for a and b
                     int a_index1d = 0, b_index1d = 0;
 
                     // higher dimensions
-                    for(int d=0; d < a->ndim - 2; d++)
+                    for (int d = 0; d < a->ndim - 2; d++)
                         a_index1d += (nd_index[d] * a->strides[d]);
-                    for(int d=0; d < b->ndim - 2; d++)
+                    for (int d = 0; d < b->ndim - 2; d++)
                         b_index1d += (nd_index[d] * b->strides[d]);
 
                     // last 2 dimensions
@@ -785,7 +885,7 @@ Array* smMatMul(Array *a, Array *b) {
 
                 // same as a and b, for result
                 int r_index1d = 0;
-                for(int d=0; d < a->ndim - 2; d++)
+                for (int d = 0; d < a->ndim - 2; d++)
                     r_index1d += (nd_index[d] * result->strides[d]);
                 r_index1d += (i * result->strides[result->ndim - 2] + j * result->strides[result->ndim - 1]);
 
@@ -801,34 +901,38 @@ Array* smMatMul(Array *a, Array *b) {
 /*
 Apply a given ArrayFunc element-wise to the array, inplace
 */
-void smApplyInplace(Array *arr, ArrayFunc func) {
-    for(int i=0; i<arr->totalsize; i++) {
+void smApplyInplace(Array *arr, ArrayFunc func)
+{
+    for (int i = 0; i < arr->totalsize; i++)
+    {
         arr->data[i] = func(arr->data[i]);
     }
 }
 
 // --------------------------------------------------------------
 
-float square(float x) {
+float square(float x)
+{
     return x * x;
 }
 
-float cube(float x) {
+float cube(float x)
+{
     return x * x * x;
 }
 
-
-int main() {
-    // new random values 
+int main()
+{
+    // new random values
     srand(time(NULL));
 
     int shape_a[] = {2, 3, 4};
     int shape_b[] = {2, 4, 2};
-    
-    Array* a = smReshapeNew(smArange(1, 25, 1), shape_a, 3);
-    Array* b = smReshapeNew(smArange(1, 17, 1), shape_b, 3);
 
-    Array* res = smMatMul(a, b);
+    Array *a = smReshapeNew(smArange(1, 25, 1), shape_a, 3);
+    Array *b = smReshapeNew(smArange(1, 17, 1), shape_b, 3);
+
+    Array *res = smMatMul(a, b);
 
     printf("Array a:\n");
     smShow(a);
@@ -837,6 +941,8 @@ int main() {
     printf("\nMatmul result:\n");
     smShow(res);
 
-    smCleanup(a); smCleanup(b); smCleanup(res);
+    smCleanup(a);
+    smCleanup(b);
+    smCleanup(res);
     return 0;
 }
