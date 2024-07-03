@@ -28,6 +28,12 @@ one thing to note here is every Array has only `float` dtype
 typedef float (*ArrayFunc)(float);
 
 
+// struct to hold all nD indices of the array
+typedef struct {
+    int** indices;  // 2D array to hold all possible index combinations
+    int count;      // total number of index combinations
+} ArrayIndices;
+
 // our hero
 typedef struct {
     float* data;        // holds the actual data in continuous way
@@ -39,6 +45,8 @@ typedef struct {
     int ndim;           // number of dimensions
     int itemsize;       // size of one element in the array
     int totalsize;      // total size to allocate
+
+    ArrayIndices* idxs; // n-dimensional indices
 
     bool C_ORDER;       // flag if array is c-order
     bool F_ORDER;       // flag if array is f-order
@@ -52,6 +60,12 @@ void smCleanup(Array* arr) {
     free(arr->shape);
     free(arr->strides);
     free(arr->backstrides);
+    // clean up indices
+    for (int i = 0; i < arr->idxs->count; i++) {
+        free(arr->idxs->indices[i]);
+    }
+    free(arr->idxs->indices);
+    free(arr->idxs);
     free(arr);
 }
 
@@ -134,6 +148,55 @@ void __recalculateBackstrides__(Array* arr) {
 }
 
 /*
+function to create the arrayIndices
+*/
+void __createArrayIndices__(Array* arr) {
+    arr->idxs = (ArrayIndices*)malloc(sizeof(ArrayIndices));
+    _checkNull(arr->idxs);
+    arr->idxs->count = arr->totalsize;
+    arr->idxs->indices = (int**)malloc(arr->idxs->count * sizeof(int*));
+    _checkNull(arr->idxs->indices);
+
+    for (int i=0; i<arr->idxs->count; i++) {
+        arr->idxs->indices[i] = (int*)malloc(arr->ndim * sizeof(int));
+        _checkNull(arr->idxs->indices[i]);
+    }
+
+    // generate all possible index combinations
+    int* current_index = (int*)calloc(arr->ndim, sizeof(int));
+    for (int i = 0; i < arr->idxs->count; i++) {
+        // Copy current index to ai->indices[i]
+        for (int j = 0; j < arr->ndim; j++) {
+            arr->idxs->indices[i][j] = current_index[j];
+        }
+
+        // Increment the index
+        for (int j = arr->ndim - 1; j >= 0; j--) {
+            if (++current_index[j] < arr->shape[j]) {
+                break;
+            }
+            current_index[j] = 0;
+        }
+    }
+
+    free(current_index);
+}
+
+// helper function to print ArrayIndices (for debugging)
+void printArrayIndices(Array* arr) {
+    for (int i = 0; i < arr->idxs->count; i++) {
+        printf("{");
+        for (int j = 0; j < arr->ndim; j++) {
+            printf("%d", arr->idxs->indices[i][j]);
+            if (j < arr->ndim - 1) {
+                printf(", ");
+            }
+        }
+        printf("}\n");
+    }
+}
+
+/*
 assume that the shape and number of dims are given,
 create a new Array from that.
 */
@@ -166,6 +229,7 @@ Array* smCreate(const int* shape, int ndim) {
     // so strides[ndim - 1] = itemsize
     __recalculateStrides__(arr);
     __recalculateBackstrides__(arr);
+    __createArrayIndices__(arr);
     __setArrayFlags__(arr);
 
     // allocate data
@@ -640,12 +704,14 @@ int main() {
     // new random values 
     srand(time(NULL));
 
-    const int shape[] = {100, 100};
-    Array *a = smRandom(shape, 2);
+    int shape[] = {3, 2, 3};
+    int ndim = 3;
+    
+    Array* a = smRandom(shape, ndim);
+    
+    printf("Generated indices:\n");
+    printArrayIndices(a);
 
-    smApplyInplace(a, square);
-    smShow(a);
-
-    free(a);
+    smCleanup(a);
     return 0;
 }
