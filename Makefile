@@ -1,7 +1,7 @@
 # Makefile for compiling main.c with smolar.c and smolar.h
-
 CC = gcc
-CFLAGS = -Wall   # Compiler flags, adjust as needed
+CFLAGS = -Wall -O2  # Compiler flags, added -O2 for optimization
+LDFLAGS = -lm       # Linker flags, added -lm for math library
 TARGET = main       # Output executable name
 
 # List of source files
@@ -12,7 +12,7 @@ OBJS = $(SRCS:.c=.o)
 
 # Target to build the executable
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
+	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 # Dependencies for each object file
 main.o: main.c smolar.h
@@ -24,3 +24,6 @@ smolar.o: smolar.c smolar.h
 # Clean target to remove object files and executable
 clean:
 	rm -f $(OBJS) $(TARGET)
+
+# Phony target to prevent conflicts with files of the same name
+.PHONY: clean

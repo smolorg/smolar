@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #include "smolar.h"
 
@@ -976,7 +977,289 @@ Array *smMatMul(Array *a, Array *b)
 
     return result;
 }
+// Array *smMatMul(Array *a, Array *b)
+// {
+//     if (a->ndim < 2 || b->ndim < 2)
+//     {
+//         fprintf(stderr, ">> Error: both arrays must have at least 2 dimensions for matmul.\n");
+//         return NULL;
+//     }
+//     if (a->shape[a->ndim - 1] != b->shape[b->ndim - 2])
+//     {
+//         fprintf(stderr, ">> Error: last dimension of first array must match second-last dimension of second array.\n");
+//         return NULL;
+//     }
 
+//     int result_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
+//     int *result_shape = (int *)malloc(result_ndim * sizeof(int));
+
+//     // broadcast result shape until last two axes
+//     for (int i = 0; i < result_ndim - 2; i++)
+//     {
+//         result_shape[i] = (i < a->ndim - 2) ? a->shape[i] : 1;
+//         result_shape[i] = (i < b->ndim - 2) ? (result_shape[i] > b->shape[i] ? result_shape[i] : b->shape[i]) : result_shape[i];
+//     }
+//     result_shape[result_ndim - 2] = a->shape[a->ndim - 2];
+//     result_shape[result_ndim - 1] = b->shape[b->ndim - 1];
+
+//     Array *result = smCreate(result_shape, result_ndim);
+//     free(result_shape);
+
+//     int m = a->shape[a->ndim - 2];
+//     int n = a->shape[a->ndim - 1];
+//     int p = b->shape[b->ndim - 1];
+
+//     // total matmuls to perform
+//     int last_two = result->shape[result_ndim - 1] * result->shape[result_ndim - 2];
+//     int totalops = result->totalsize / last_two;
+
+//     ArrayIndices *idxs = __getArrayIndicesFromShape__(result->shape, result_ndim - 2);
+
+//     for (int idx = 0; idx < totalops; idx++)
+//     {
+//         int *nd_index = idxs->indices[idx];
+
+//         // Optimized matrix multiplication loop
+//         for (int j = 0; j < p; j++)
+//         {
+//             for (int i = 0; i < m; i++)
+//             {
+//                 float sum = 0.0f;
+//                 int a_index1d = 0, b_index1d = 0, r_index1d = 0;
+
+//                 // Calculate base indices for higher dimensions
+//                 for (int d = 0; d < a->ndim - 2; d++)
+//                     a_index1d += (nd_index[d] * a->strides[d]);
+//                 for (int d = 0; d < b->ndim - 2; d++)
+//                     b_index1d += (nd_index[d] * b->strides[d]);
+//                 for (int d = 0; d < result->ndim - 2; d++)
+//                     r_index1d += (nd_index[d] * result->strides[d]);
+
+//                 // Add offsets for the current i and j
+//                 a_index1d += i * a->strides[a->ndim - 2];
+//                 b_index1d += j * b->strides[b->ndim - 1];
+//                 r_index1d += i * result->strides[result->ndim - 2] + j * result->strides[result->ndim - 1];
+
+//                 // Inner product calculation
+//                 for (int k = 0; k < n; k++)
+//                 {
+//                     sum += a->data[(a_index1d + k * a->strides[a->ndim - 1]) / a->itemsize] * 
+//                            b->data[(b_index1d + k * b->strides[b->ndim - 2]) / b->itemsize];
+//                 }
+
+//                 result->data[r_index1d / result->itemsize] = sum;
+//             }
+//         }
+//     }
+//     free(idxs);
+
+//     return result;
+// }
+
+// #define BLOCK_SIZE 32  // This can be tuned based on the specific hardware
+
+// Array *smMatMul(Array *a, Array *b)
+// {
+//     if (a->ndim < 2 || b->ndim < 2)
+//     {
+//         fprintf(stderr, ">> Error: both arrays must have at least 2 dimensions for matmul.\n");
+//         return NULL;
+//     }
+//     if (a->shape[a->ndim - 1] != b->shape[b->ndim - 2])
+//     {
+//         fprintf(stderr, ">> Error: last dimension of first array must match second-last dimension of second array.\n");
+//         return NULL;
+//     }
+
+//     int result_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
+//     int *result_shape = (int *)malloc(result_ndim * sizeof(int));
+
+//     // broadcast result shape until last two axes
+//     for (int i = 0; i < result_ndim - 2; i++)
+//     {
+//         result_shape[i] = (i < a->ndim - 2) ? a->shape[i] : 1;
+//         result_shape[i] = (i < b->ndim - 2) ? (result_shape[i] > b->shape[i] ? result_shape[i] : b->shape[i]) : result_shape[i];
+//     }
+//     result_shape[result_ndim - 2] = a->shape[a->ndim - 2];
+//     result_shape[result_ndim - 1] = b->shape[b->ndim - 1];
+
+//     Array *result = smCreate(result_shape, result_ndim);
+//     free(result_shape);
+
+//     int m = a->shape[a->ndim - 2];
+//     int n = a->shape[a->ndim - 1];
+//     int p = b->shape[b->ndim - 1];
+
+//     // total matmuls to perform
+//     int last_two = result->shape[result_ndim - 1] * result->shape[result_ndim - 2];
+//     int totalops = result->totalsize / last_two;
+
+//     ArrayIndices *idxs = __getArrayIndicesFromShape__(result->shape, result_ndim - 2);
+
+//     for (int idx = 0; idx < totalops; idx++)
+//     {
+//         int *nd_index = idxs->indices[idx];
+
+//         // Tiled matrix multiplication
+//         for (int jj = 0; jj < p; jj += BLOCK_SIZE)
+//         {
+//             for (int kk = 0; kk < n; kk += BLOCK_SIZE)
+//             {
+//                 for (int i = 0; i < m; i++)
+//                 {
+//                     for (int j = jj; j < fmin(jj + BLOCK_SIZE, p); j++)
+//                     {
+//                         float sum = 0.0f;
+//                         int a_index1d = 0, b_index1d = 0, r_index1d = 0;
+
+//                         // Calculate base indices for higher dimensions
+//                         for (int d = 0; d < a->ndim - 2; d++)
+//                             a_index1d += (nd_index[d] * a->strides[d]);
+//                         for (int d = 0; d < b->ndim - 2; d++)
+//                             b_index1d += (nd_index[d] * b->strides[d]);
+//                         for (int d = 0; d < result->ndim - 2; d++)
+//                             r_index1d += (nd_index[d] * result->strides[d]);
+
+//                         // Add offsets for the current i and j
+//                         a_index1d += i * a->strides[a->ndim - 2];
+//                         b_index1d += j * b->strides[b->ndim - 1];
+//                         r_index1d += i * result->strides[result->ndim - 2] + j * result->strides[result->ndim - 1];
+
+//                         // Inner product calculation for this block
+//                         for (int k = kk; k < fmin(kk + BLOCK_SIZE, n); k++)
+//                         {
+//                             sum += a->data[(a_index1d + k * a->strides[a->ndim - 1]) / a->itemsize] * 
+//                                    b->data[(b_index1d + k * b->strides[b->ndim - 2]) / b->itemsize];
+//                         }
+
+//                         // Accumulate the result
+//                         result->data[r_index1d / result->itemsize] += sum;
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     free(idxs);
+
+//     return result;
+// }
+
+
+// #define BLOCK_SIZE 32
+// #define UNROLL_FACTOR 4  // Unrolling the innermost loop 4 times
+
+// Array *smMatMul(Array *a, Array *b)
+// {
+//     if (a->ndim < 2 || b->ndim < 2)
+//     {
+//         fprintf(stderr, ">> Error: both arrays must have at least 2 dimensions for matmul.\n");
+//         return NULL;
+//     }
+//     if (a->shape[a->ndim - 1] != b->shape[b->ndim - 2])
+//     {
+//         fprintf(stderr, ">> Error: last dimension of first array must match second-last dimension of second array.\n");
+//         return NULL;
+//     }
+
+//     int result_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
+//     int *result_shape = (int *)malloc(result_ndim * sizeof(int));
+
+//     // broadcast result shape until last two axes
+//     for (int i = 0; i < result_ndim - 2; i++)
+//     {
+//         result_shape[i] = (i < a->ndim - 2) ? a->shape[i] : 1;
+//         result_shape[i] = (i < b->ndim - 2) ? (result_shape[i] > b->shape[i] ? result_shape[i] : b->shape[i]) : result_shape[i];
+//     }
+//     result_shape[result_ndim - 2] = a->shape[a->ndim - 2];
+//     result_shape[result_ndim - 1] = b->shape[b->ndim - 1];
+
+//     Array *result = smCreate(result_shape, result_ndim);
+//     free(result_shape);
+
+//     int m = a->shape[a->ndim - 2];
+//     int n = a->shape[a->ndim - 1];
+//     int p = b->shape[b->ndim - 1];
+
+//     // total matmuls to perform
+//     int last_two = result->shape[result_ndim - 1] * result->shape[result_ndim - 2];
+//     int totalops = result->totalsize / last_two;
+
+//     ArrayIndices *idxs = __getArrayIndicesFromShape__(result->shape, result_ndim - 2);
+
+//     for (int idx = 0; idx < totalops; idx++)
+//     {
+//         int *nd_index = idxs->indices[idx];
+
+//         // Initialize result to zero
+//         for (int i = 0; i < m; i++)
+//         {
+//             for (int j = 0; j < p; j++)
+//             {
+//                 int r_index1d = 0;
+//                 for (int d = 0; d < result->ndim - 2; d++)
+//                     r_index1d += (nd_index[d] * result->strides[d]);
+//                 r_index1d += i * result->strides[result->ndim - 2] + j * result->strides[result->ndim - 1];
+//                 result->data[r_index1d / result->itemsize] = 0.0f;
+//             }
+//         }
+
+//         // Tiled and unrolled matrix multiplication
+//         for (int jj = 0; jj < p; jj += BLOCK_SIZE)
+//         {
+//             for (int kk = 0; kk < n; kk += BLOCK_SIZE)
+//             {
+//                 for (int i = 0; i < m; i++)
+//                 {
+//                     for (int j = jj; j < (jj + BLOCK_SIZE < p ? jj + BLOCK_SIZE : p); j++)
+//                     {
+//                         float sum = 0.0f;
+//                         int a_index1d = 0, b_index1d = 0, r_index1d = 0;
+
+//                         // Calculate base indices for higher dimensions
+//                         for (int d = 0; d < a->ndim - 2; d++)
+//                             a_index1d += (nd_index[d] * a->strides[d]);
+//                         for (int d = 0; d < b->ndim - 2; d++)
+//                             b_index1d += (nd_index[d] * b->strides[d]);
+//                         for (int d = 0; d < result->ndim - 2; d++)
+//                             r_index1d += (nd_index[d] * result->strides[d]);
+
+//                         // Add offsets for the current i and j
+//                         a_index1d += i * a->strides[a->ndim - 2];
+//                         b_index1d += j * b->strides[b->ndim - 1];
+//                         r_index1d += i * result->strides[result->ndim - 2] + j * result->strides[result->ndim - 1];
+
+//                         // Inner product calculation for this block with loop unrolling
+//                         int k;
+//                         for (k = kk; k < (kk + BLOCK_SIZE < n ? kk + BLOCK_SIZE : n) - UNROLL_FACTOR + 1; k += UNROLL_FACTOR)
+//                         {
+//                             sum += a->data[(a_index1d + k * a->strides[a->ndim - 1]) / a->itemsize] * 
+//                                    b->data[(b_index1d + k * b->strides[b->ndim - 2]) / b->itemsize];
+//                             sum += a->data[(a_index1d + (k+1) * a->strides[a->ndim - 1]) / a->itemsize] * 
+//                                    b->data[(b_index1d + (k+1) * b->strides[b->ndim - 2]) / b->itemsize];
+//                             sum += a->data[(a_index1d + (k+2) * a->strides[a->ndim - 1]) / a->itemsize] * 
+//                                    b->data[(b_index1d + (k+2) * b->strides[b->ndim - 2]) / b->itemsize];
+//                             sum += a->data[(a_index1d + (k+3) * a->strides[a->ndim - 1]) / a->itemsize] * 
+//                                    b->data[(b_index1d + (k+3) * b->strides[b->ndim - 2]) / b->itemsize];
+//                         }
+
+//                         // Handle remaining iterations
+//                         for (; k < (kk + BLOCK_SIZE < n ? kk + BLOCK_SIZE : n); k++)
+//                         {
+//                             sum += a->data[(a_index1d + k * a->strides[a->ndim - 1]) / a->itemsize] * 
+//                                    b->data[(b_index1d + k * b->strides[b->ndim - 2]) / b->itemsize];
+//                         }
+
+//                         // Accumulate the result
+//                         result->data[r_index1d / result->itemsize] += sum;
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     free(idxs);
+
+//     return result;
+// }
 /*
 Apply a given ArrayFunc element-wise to the array, inplace
 */
