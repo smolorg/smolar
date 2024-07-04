@@ -25,24 +25,25 @@ one thing to note here is every Array has only `float` dtype
 
 typedef float (*ArrayFunc)(float);
 
-typedef struct {
-    int **indices;          // 2D array to hold all possible index combinations
-    int count;              // total number of index combinations
+typedef struct
+{
+    int **indices; // 2D array to hold all possible index combinations
+    int count;     // total number of index combinations
 } ArrayIndices;
 
-typedef struct {
-    float *data;            // holds the actual data in continuous way
-    int *shape;             // shape of the array
-    int *strides;           // number of bytes to skip for each dimension
-    int *backstrides;       // reverse of strides; how many bytes to skip to go reverse
-    int ndim;               // number of dimensions
-    int itemsize;           // size of one element in the array
-    int totalsize;          // total size to allocate
-    ArrayIndices *idxs;     // n-dimensional indices
+typedef struct
+{
+    float *data;        // holds the actual data in continuous way
+    int *shape;         // shape of the array
+    int *strides;       // number of bytes to skip for each dimension
+    int *backstrides;   // reverse of strides; how many bytes to skip to go reverse
+    int ndim;           // number of dimensions
+    int itemsize;       // size of one element in the array
+    int totalsize;      // total size to allocate
+    ArrayIndices *idxs; // n-dimensional indices
     bool C_ORDER;
     bool F_ORDER;
 } Array;
-
 
 // private
 void __checkOrderC__(Array *arr);
@@ -58,12 +59,11 @@ void __printArrayData__(Array *arr);
 int *__broadcastFinalShape__(Array *a, Array *b);
 Array *__broadcastArray__(Array *arr, const int *shape, int ndim);
 
-
 // creation and management
-Array* smCreate(const int *shape, int ndim);
+Array *smCreate(const int *shape, int ndim);
 void smCleanup(Array *arr);
-Array* smRandom(const int *shape, int ndim);
-Array* smArange(float start, float end, float step);
+Array *smRandom(const int *shape, int ndim);
+Array *smArange(float start, float end, float step);
 void smFromValues(Array *arr, float *values);
 
 // information and display
@@ -72,14 +72,15 @@ void smShow(Array *arr);
 
 // operations
 int smCheckShapesEqual(Array *a, Array *b);
-Array* smReshapeNew(Array *arr, const int *shape, int ndim);
+Array *smReshapeNew(Array *arr, const int *shape, int ndim);
 void smReshapeInplace(Array *arr, const int *shape, int ndim);
-Array* smTransposeNew(Array *arr, const int *axes);
-Array* smAdd(Array *a, Array *b);
-Array* smMul(Array *a, Array *b);
-Array* smExpandDims(Array *arr, int axis);
-Array* smSqueeze(Array* arr, int axis);
-Array* smMatMul(Array *a, Array *b);
+Array *smTransposeNew(Array *arr, const int *axes);
+Array *smAdd(Array *a, Array *b);
+Array *smMul(Array *a, Array *b);
+Array *smExpandDims(Array *arr, int axis);
+Array *smSqueeze(Array *arr, int axis);
+Array *smDot(Array *a, Array *b);
+Array *smMatMul(Array *a, Array *b);
 void smApplyInplace(Array *arr, ArrayFunc func);
 
 // utility functions

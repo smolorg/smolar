@@ -766,31 +766,37 @@ For example: If arr->shape is (3,) then
 smExpandAxis(arr, 0)->shape will be (1, 3)
 smExpandAxis(arr, 1)->shape will be (3, 1) and so on...
 */
-Array *smExpandDims(Array* arr, int axis) {
+Array *smExpandDims(Array *arr, int axis)
+{
     // handle negative values
-    if(axis < 0)    axis = arr->ndim + axis + 1;
+    if (axis < 0)
+        axis = arr->ndim + axis + 1;
 
-    if(axis < 0 || axis > arr->ndim) {
+    if (axis < 0 || axis > arr->ndim)
+    {
         fprintf(stderr, ">> error: axis out of bounds for expanding.\n");
         exit(1);
     }
 
     int new_ndim = arr->ndim + 1;
-    int *new_shape = (int*)malloc(new_ndim * sizeof(int));
+    int *new_shape = (int *)malloc(new_ndim * sizeof(int));
     _checkNull(new_shape);
 
     // copy into new shape
     int j = 0;
-    for(int i=0; i<new_ndim; i++) {
-        if (i == axis)  new_shape[i] = 1;
-        else {
+    for (int i = 0; i < new_ndim; i++)
+    {
+        if (i == axis)
+            new_shape[i] = 1;
+        else
+        {
             new_shape[i] = arr->shape[j];
             j++;
         }
     }
 
     // copy data
-    Array* result = smCreate(new_shape, new_ndim);
+    Array *result = smCreate(new_shape, new_ndim);
     memcpy(result->data, arr->data, arr->totalsize * sizeof(float));
 
     free(new_shape);
@@ -802,42 +808,80 @@ Squeeze any axis in an array.
 For example: If arr->shape is (3, 1) then
 smExpandAxis(arr, 1)->shape will be (3, ) and so on...
 */
-Array *smSqueeze(Array* arr, int axis) {
-    if(axis < 0)    axis = arr->ndim + axis;
+Array *smSqueeze(Array *arr, int axis)
+{
+    if (axis < 0)
+        axis = arr->ndim + axis;
 
-    if(axis < 0 || axis > arr->ndim) {
+    if (axis < 0 || axis > arr->ndim)
+    {
         fprintf(stderr, ">> error: axis out of bounds for expanding.\n");
         exit(1);
     }
-    if (arr->ndim == 1) {
+    if (arr->ndim == 1)
+    {
         fprintf(stderr, ">> error: cannot squeeze Array with ndim 1.\n");
         exit(1);
     }
 
     printf("axis is %d\n", axis);
     int new_ndim = arr->ndim - 1;
-    int *new_shape = (int*)malloc(new_ndim * sizeof(int));
+    int *new_shape = (int *)malloc(new_ndim * sizeof(int));
     _checkNull(new_shape);
 
     // copy into new shape
     int j = 0;
-    for(int i=0; i<arr->ndim; i++) {
-        if(i == axis && arr->shape[i] != 1) {
+    for (int i = 0; i < arr->ndim; i++)
+    {
+        if (i == axis && arr->shape[i] != 1)
+        {
             fprintf(stderr, ">> error: dimension of the axis to squeeze must be 1.\n");
             exit(1);
         }
-        else if (i == axis && arr->shape[i] == 1)  continue;
-        else {
+        else if (i == axis && arr->shape[i] == 1)
+            continue;
+        else
+        {
             new_shape[j] = arr->shape[i];
             j++;
         }
     }
 
     // copy data
-    Array* result = smCreate(new_shape, new_ndim);
+    Array *result = smCreate(new_shape, new_ndim);
     memcpy(result->data, arr->data, arr->totalsize * sizeof(float));
 
     free(new_shape);
+    return result;
+}
+
+/*
+Dot product between two vectors i.e. Arrays with dimension 1.
+Returns: Array with shape {1} i.e. only one element.
+*/
+Array *smDot(Array *a, Array *b)
+{
+    if (a->ndim != 1 && b->ndim != 1)
+    {
+        fprintf(stderr, ">> error: both arrays should be vectors for dot product.");
+        exit(1);
+    }
+    if (a->shape[0] != b->shape[0])
+    {
+        fprintf(stderr, ">> error: both vectors should have the same shape for dot product.");
+        exit(1);
+    }
+
+    float dot = 0.0f;
+    int shape[] = {1};
+    Array *result = smCreate(shape, 1);
+
+    for (int i = 0; i < a->totalsize; i++)
+    {
+        dot += (a->data[i] * b->data[i]);
+    }
+    result->data[0] = dot;
+
     return result;
 }
 
