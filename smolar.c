@@ -761,6 +761,40 @@ Array *smMul(Array *a, Array *b)
 }
 
 /*
+Expand any axis in an array.
+For example: If arr->shape is (3,) then
+smExpandAxis(arr, 0)->shape will be (1, 3)
+smExpandAxis(arr, 1)->shape will be (3, 1) and so on...
+*/
+Array *smExpandDims(Array* arr, int axis) {
+    if(axis < 0 || axis > arr->ndim) {
+        fprintf(stderr, ">> error: axis out of bounds for expanding.\n");
+        return NULL;
+    }
+
+    int new_ndim = arr->ndim + 1;
+    int *new_shape = (int*)malloc(new_ndim * sizeof(int));
+    _checkNull(new_shape);
+
+    // copy into new shape
+    int j = 0;
+    for(int i=0; i<new_ndim; i++) {
+        if (i == axis)  new_shape[i] = 1;
+        else {
+            new_shape[i] = arr->shape[j];
+            j++;
+        }
+    }
+
+    // copy data
+    Array* result = smCreate(new_shape, new_ndim);
+    memcpy(result->data, arr->data, arr->totalsize * sizeof(float));
+
+    free(new_shape);
+    return result;
+}
+
+/*
 matrix multiplication of n-dimensional arrays.
 ```
 for 2D arrays (m, n) @ (n, d) = (m, d)
