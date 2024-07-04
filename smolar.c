@@ -1,56 +1,10 @@
-/*
-smolar - a tiny multidimensional array library in just one file
-
-well, it is obvious this file will contain A LOT but there are some naming
-conventions that i follow here (i try):
-
-Array:
-* "public" functions or functions to be used start from "sm" such as: smAdd, smRandom
-* "private" array functions start and end with double underscores "__"
-* functions that can be parallelized will start from "P" or "__P"
-* function names can be long dw
-
-Utility:
-* these functions start from a single underscore "_"
-
-every function uses `camelCase` for its name, and that's it.
-
-one thing to note here is every Array has only `float` dtype
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
 
-typedef float (*ArrayFunc)(float);
-
-// struct to hold all nD indices of the array
-typedef struct
-{
-    int **indices; // 2D array to hold all possible index combinations
-    int count;     // total number of index combinations
-} ArrayIndices;
-
-// our hero
-typedef struct
-{
-    float *data; // holds the actual data in continuous way
-
-    int *shape;       // shape of the array
-    int *strides;     // number of bytes to skip for each dimension
-    int *backstrides; // reverse of strides; how many bytes to skip to go reverse
-
-    int ndim;      // number of dimensions
-    int itemsize;  // size of one element in the array
-    int totalsize; // total size to allocate
-
-    ArrayIndices *idxs; // n-dimensional indices
-
-    bool C_ORDER; // flag if array is c-order
-    bool F_ORDER; // flag if array is f-order
-} Array;
+#include "smolar.h"
 
 /*
 free all the memory allocated by an Array
@@ -919,44 +873,4 @@ float square(float x)
 float cube(float x)
 {
     return x * x * x;
-}
-
-int main()
-{
-    // new random values
-    srand(time(NULL));
-
-    int shape_a[] = {100, 100};
-    int shape_b[] = {100, 100};
-
-    int num_runs = 5;
-    clock_t start, end;
-    float cpu_time_used, total_time = 0.0f;
-
-    Array *a = smReshapeNew(smArange(1, 10001, 1), shape_a, 2);
-    Array *b = smReshapeNew(smArange(1, 10001, 1), shape_b, 2);
-
-    printf("\nA shape:\n");
-    __printArrayInternals__(a, a->shape);
-    printf("B shape:\n");
-    __printArrayInternals__(b, b->shape);
-
-    for(int i=0; i<num_runs; i++)
-    {
-        start = clock();
-        Array *res = smMatMul(a, b);
-        end = clock();
-
-        cpu_time_used = ((float) (end - start)) / CLOCKS_PER_SEC;
-        total_time += cpu_time_used;
-
-        smCleanup(res);
-    }
-    
-    float avg_time = total_time / num_runs;
-    printf("\naverage execution time for matmul over %d runs: %f seconds\n\n", num_runs, avg_time);
-
-    smCleanup(a);
-    smCleanup(b);
-    return 0;
 }
