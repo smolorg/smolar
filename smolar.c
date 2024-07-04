@@ -767,9 +767,12 @@ smExpandAxis(arr, 0)->shape will be (1, 3)
 smExpandAxis(arr, 1)->shape will be (3, 1) and so on...
 */
 Array *smExpandDims(Array* arr, int axis) {
+    // handle negative values
+    if(axis < 0)    axis = arr->ndim + axis + 1;
+
     if(axis < 0 || axis > arr->ndim) {
         fprintf(stderr, ">> error: axis out of bounds for expanding.\n");
-        return NULL;
+        exit(1);
     }
 
     int new_ndim = arr->ndim + 1;
@@ -782,6 +785,50 @@ Array *smExpandDims(Array* arr, int axis) {
         if (i == axis)  new_shape[i] = 1;
         else {
             new_shape[i] = arr->shape[j];
+            j++;
+        }
+    }
+
+    // copy data
+    Array* result = smCreate(new_shape, new_ndim);
+    memcpy(result->data, arr->data, arr->totalsize * sizeof(float));
+
+    free(new_shape);
+    return result;
+}
+
+/*
+Squeeze any axis in an array.
+For example: If arr->shape is (3, 1) then
+smExpandAxis(arr, 1)->shape will be (3, ) and so on...
+*/
+Array *smSqueeze(Array* arr, int axis) {
+    if(axis < 0)    axis = arr->ndim + axis;
+
+    if(axis < 0 || axis > arr->ndim) {
+        fprintf(stderr, ">> error: axis out of bounds for expanding.\n");
+        exit(1);
+    }
+    if (arr->ndim == 1) {
+        fprintf(stderr, ">> error: cannot squeeze Array with ndim 1.\n");
+        exit(1);
+    }
+
+    printf("axis is %d\n", axis);
+    int new_ndim = arr->ndim - 1;
+    int *new_shape = (int*)malloc(new_ndim * sizeof(int));
+    _checkNull(new_shape);
+
+    // copy into new shape
+    int j = 0;
+    for(int i=0; i<arr->ndim; i++) {
+        if(i == axis && arr->shape[i] != 1) {
+            fprintf(stderr, ">> error: dimension of the axis to squeeze must be 1.\n");
+            exit(1);
+        }
+        else if (i == axis && arr->shape[i] == 1)  continue;
+        else {
+            new_shape[j] = arr->shape[i];
             j++;
         }
     }

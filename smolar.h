@@ -78,6 +78,7 @@ Array* smTransposeNew(Array *arr, const int *axes);
 Array* smAdd(Array *a, Array *b);
 Array* smMul(Array *a, Array *b);
 Array* smExpandDims(Array *arr, int axis);
+Array* smSqueeze(Array* arr, int axis);
 Array* smMatMul(Array *a, Array *b);
 void smApplyInplace(Array *arr, ArrayFunc func);
 
