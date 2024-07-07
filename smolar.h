@@ -33,14 +33,24 @@ typedef struct
 
 typedef struct
 {
-    float *data;        // holds the actual data in continuous way
-    int *shape;         // shape of the array
-    int *strides;       // number of bytes to skip for each dimension
-    int *backstrides;   // reverse of strides; how many bytes to skip to go reverse
-    int ndim;           // number of dimensions
-    int itemsize;       // size of one element in the array
-    int totalsize;      // total size to allocate
-    ArrayIndices *idxs; // n-dimensional indices
+    int *indices;
+    int count;
+} LinearIndices;
+
+typedef struct
+{
+    float *data;      // holds the actual data in continuous way
+    int *shape;       // shape of the array
+    int *strides;     // number of bytes to skip for each dimension
+    int *backstrides; // reverse of strides; how many bytes to skip to go reverse
+
+    int ndim;      // number of dimensions
+    int itemsize;  // size of one element in the array
+    int totalsize; // total size to allocate
+
+    ArrayIndices *idxs;   // n-dimensional indices
+    LinearIndices *lidxs; // 1D index
+
     bool C_ORDER;
     bool F_ORDER;
 } Array;
@@ -53,6 +63,7 @@ void __recalculateStrides__(Array *arr);
 void __recalculateBackstrides__(Array *arr);
 ArrayIndices *__getArrayIndicesFromShape__(const int *shape, int ndim);
 void __createArrayIndices__(Array *arr);
+void __createLinearIndices__(Array *arr);
 bool __checkShapeCompatible__(Array *arr, const int *shape, int ndim);
 void __printArrayInternals__(Array *arr, int *s);
 void __printArrayData__(Array *arr);
