@@ -156,6 +156,17 @@ function to create the arrayIndices
 */
 void __createArrayIndices__(Array *arr)
 {
+    if (arr->idxs != NULL)
+    {
+        // clean up indices
+        for (int i = 0; i < arr->idxs->count; i++)
+        {
+            free(arr->idxs->indices[i]);
+        }
+        free(arr->idxs->indices);
+        free(arr->idxs);
+    }
+
     arr->idxs = (ArrayIndices *)malloc(sizeof(ArrayIndices));
     _checkNull(arr->idxs);
     arr->idxs->count = arr->totalsize;
@@ -189,6 +200,27 @@ void __createArrayIndices__(Array *arr)
     }
 
     free(current_index);
+}
+
+/*
+1D equivalent of the n-dimensional indices.
+*/
+void __createLinearIndices__(Array *arr)
+{
+    arr->lidxs = (LinearIndices *)malloc(sizeof(LinearIndices));
+    _checkNull(arr->lidxs);
+    arr->lidxs->count = arr->totalsize;
+    arr->lidxs->indices = (int *)malloc(arr->lidxs->count * sizeof(int));
+    _checkNull(arr->lidxs->indices);
+
+    for (int i = 0; i < arr->totalsize; i++)
+    {
+        arr->lidxs->indices[i] = 0;
+        for (int j = 0; j < arr->ndim; j++)
+        {
+            arr->lidxs->indices[i] += (arr->idxs->indices[i][j] * arr->strides[j]);
+        }
+    }
 }
 
 // helper function to print ArrayIndices (for debugging)
