@@ -1,2 +1,6 @@
 smolar
 .DS_Store
+*.so
+*.o
+*.gdb
+main

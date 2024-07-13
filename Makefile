@@ -1,29 +1,43 @@
-# Makefile for compiling main.c with smolar.c and smolar.h
+# Makefile for compiling smolar.c into a shared library and main.c as an executable
+
 CC = gcc
-CFLAGS = -Wall -O2  # Compiler flags, added -O2 for optimization
-LDFLAGS = -lm       # Linker flags, added -lm for math library
-TARGET = main       # Output executable name
+CFLAGS = -Wall -O2 -g -fPIC # Added -fPIC for position-independent code
+LDFLAGS = -lm -Wl,-rpath,. # Added -Wl,-rpath,. to set runtime library path
 
-# List of source files
-SRCS = main.c smolar.c
+# Targets
+LIBRARY = libsmolar.so     # Shared library name
+EXECUTABLE = main          # Executable name
 
-# List of object files
-OBJS = $(SRCS:.c=.o)
+# Source files
+LIB_SRC = smolar.c
+MAIN_SRC = main.c
+
+# Object files
+LIB_OBJ = $(LIB_SRC:.c=.o)
+MAIN_OBJ = $(MAIN_SRC:.c=.o)
+
+# Default target
+all: $(LIBRARY) $(EXECUTABLE)
+
+# Target to build the shared library
+$(LIBRARY): $(LIB_OBJ)
+	$(CC) -shared -o $@ $^ $(LDFLAGS)
 
 # Target to build the executable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS)
+$(EXECUTABLE): $(MAIN_OBJ) $(LIBRARY)
+	$(CC) $(CFLAGS) -o $@ $(MAIN_OBJ) -L. -lsmolar $(LDFLAGS)
 
-# Dependencies for each object file
-main.o: main.c smolar.h
-	$(CC) $(CFLAGS) -c main.c
+# Compile smolar.c into an object file
+$(LIB_OBJ): $(LIB_SRC) smolar.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-smolar.o: smolar.c smolar.h
-	$(CC) $(CFLAGS) -c smolar.c
+# Compile main.c into an object file
+$(MAIN_OBJ): $(MAIN_SRC) smolar.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean target to remove object files and executable
+# Clean target to remove object files, library, and executable
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(LIB_OBJ) $(MAIN_OBJ) $(LIBRARY) $(EXECUTABLE)
 
 # Phony target to prevent conflicts with files of the same name
-.PHONY: clean
+.PHONY: all clean

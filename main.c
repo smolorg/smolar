@@ -5,15 +5,15 @@
 
 int main()
 {
-    int shape_a[] = {1000, 1000};
-    int shape_b[] = {1000, 1000};
+    int shape_a[] = {100, 100};
+    int shape_b[] = {100, 100};
 
     int num_runs = 5;
     clock_t start, end;
     float cpu_time_used, total_time = 0.0f;
 
-    Array *a = smReshapeNew(smArange(1, (1000 * 1000) + 1, 1), shape_a, 2);
-    Array *b = smReshapeNew(smArange(1, (1000 * 1000) + 1, 1), shape_b, 2);
+    Array *a = smReshapeNew(smArange(1, (100 * 100) + 1, 1), shape_a, 2);
+    Array *b = smReshapeNew(smArange(1, (100 * 100) + 1, 1), shape_b, 2);
 
     printf("\nA shape:\n");
     __printArrayInternals__(a, a->shape);

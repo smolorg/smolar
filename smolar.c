@@ -17,12 +17,12 @@ void smCleanup(Array *arr)
     free(arr->strides);
     free(arr->backstrides);
     // clean up indices
-    for (int i = 0; i < arr->idxs->count; i++)
-    {
-        free(arr->idxs->indices[i]);
-    }
-    free(arr->idxs->indices);
-    free(arr->idxs);
+    // for (int i = 0; i < arr->idxs->count; i++)
+    // {
+    //     free(arr->idxs->indices[i]);
+    // }
+    // free(arr->idxs->indices);
+    // free(arr->idxs);
     free(arr);
 }
 
@@ -279,7 +279,7 @@ Array *smCreate(const int *shape, int ndim)
     // so strides[ndim - 1] = itemsize
     __recalculateStrides__(arr);
     __recalculateBackstrides__(arr);
-    __createArrayIndices__(arr);
+    // __createArrayIndices__(arr);
     __setArrayFlags__(arr);
 
     // allocate data
