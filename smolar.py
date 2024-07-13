@@ -152,4 +152,7 @@ class Smolar:
         nparray = np.array(data, dtype=np.float32).reshape(shape)
         return nparray
     
+    def smShape(self, arr):
+        return tuple(arr.contents.shape[i] for i in range(arr.contents.ndim))
+    
 
