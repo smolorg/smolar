@@ -39,5 +39,6 @@ int main()
 
     smCleanup(a);
     smCleanup(b);
+
     return 0;
 }

@@ -1,2 +1,7 @@
 smolar
 .DS_Store
+*.so
+*.o
+*.gdb
+main
+__pycache__

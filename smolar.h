@@ -69,7 +69,6 @@ void __printArrayInternals__(Array *arr, int *s);
 void __printArrayData__(Array *arr);
 int *__broadcastFinalShape__(Array *a, Array *b);
 Array *__broadcastArray__(Array *arr, const int *shape, int ndim);
-
 // creation and management
 Array *smCreate(const int *shape, int ndim);
 void smCleanup(Array *arr);

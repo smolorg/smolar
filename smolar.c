@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #include "smolar.h"
 
@@ -16,12 +17,12 @@ void smCleanup(Array *arr)
     free(arr->strides);
     free(arr->backstrides);
     // clean up indices
-    for (int i = 0; i < arr->idxs->count; i++)
-    {
-        free(arr->idxs->indices[i]);
-    }
-    free(arr->idxs->indices);
-    free(arr->idxs);
+    // for (int i = 0; i < arr->idxs->count; i++)
+    // {
+    //     free(arr->idxs->indices[i]);
+    // }
+    // free(arr->idxs->indices);
+    // free(arr->idxs);
     free(arr);
 }
 
@@ -278,7 +279,7 @@ Array *smCreate(const int *shape, int ndim)
     // so strides[ndim - 1] = itemsize
     __recalculateStrides__(arr);
     __recalculateBackstrides__(arr);
-    __createArrayIndices__(arr);
+    // __createArrayIndices__(arr);
     __setArrayFlags__(arr);
 
     // allocate data
@@ -448,6 +449,7 @@ traverse array according to backstrides and execute a printf on each element
 */
 void smShow(Array *arr)
 {
+    printf("\n");
     char *curr = (char *)arr->data;
 
     curr = __traverseHelper__(
@@ -612,7 +614,7 @@ void smReshapeInplace(Array *arr, const int *shape, int ndim)
 
     __recalculateStrides__(arr);
     __recalculateBackstrides__(arr);
-    __createArrayIndices__(arr);
+    // __createArrayIndices__(arr);
     __setArrayFlags__(arr);
 }
 
@@ -661,7 +663,7 @@ Array *smTransposeNew(Array *arr, const int *axes)
     free(newshape);
     free(newstrides);
     __recalculateBackstrides__(res);
-    __createArrayIndices__(res);
+    // __createArrayIndices__(res);
     __setArrayFlags__(res);
 
     free(_axes);
@@ -971,7 +973,7 @@ Array *smMatMul(Array *a, Array *b)
 
         // perform matmul for this slice
         // note: can be parallelized
-        for (int i = 0; i < m; i++)
+        for (int i = 0; i < m; i++) 
         {
             for (int j = 0; j < p; j++)
             {
@@ -1008,7 +1010,6 @@ Array *smMatMul(Array *a, Array *b)
 
     return result;
 }
-
 /*
 Apply a given ArrayFunc element-wise to the array, inplace
 */
