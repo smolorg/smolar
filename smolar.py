@@ -1,4 +1,5 @@
 import ctypes
+import numpy as np
 
 # Load the shared library
 smolar_lib = ctypes.CDLL('./libsmolar.so')
@@ -142,5 +143,13 @@ class Smolar:
         self.smolar.smShow(arr)
 
     def smApply(self, arr, func):
-        self.smolar.smApplyInplace(arr, func)
+        self.smolar.smApply(arr, func)
+
+    def toNumpy(self, arr):
+        data = tuple(arr.contents.data[i] for i in range(arr.contents.totalsize))
+        shape = tuple(arr.contents.shape[i] for i in range(arr.contents.ndim))
+
+        nparray = np.array(data, dtype=np.float32).reshape(shape)
+        return nparray
+    
 
