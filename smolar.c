@@ -416,48 +416,40 @@ char *__traverseHelper__(
     // we are at the last dimension
     if (depth == ndim - 1)
     {
-        
-        fprintf(stdout, "[");
-        for (int i = 0; i < shape[ndim - 1]; i++)
+        fprintf(stdout, "%.3f ", *(float *)curr);
+        for (int i = 0; i < shape[ndim - 1] - 1; i++)
         {
-            fprintf(stdout, "%.3f", *(float *)curr);
-            if (i < shape[ndim - 1] - 1)
-                fprintf(stdout, ", ");
             curr += strides[ndim - 1];
+            fprintf(stdout, "%.3f ", *(float *)curr);
         }
-        fprintf(stdout, "]");
-        
+
         // backstep
         curr += backstrides[ndim - 1];
+        printf("\n");
         return curr;
     }
 
-    fprintf(stdout, "[");
     curr = __traverseHelper__(curr, shape, strides, backstrides, ndim, depth + 1);
-    for (int i = 1; i < shape[depth]; i++)
+    for (int i = 0; i < shape[depth] - 1; i++)
     {
-        fprintf(stdout, ",\n");
-        if (depth < ndim - 2)
-            fprintf(stdout, "\n");
         curr += strides[depth];
         curr = __traverseHelper__(curr, shape, strides, backstrides, ndim, depth + 1);
     }
+
     curr += backstrides[depth];
 
-    if (depth == 0)
-        fprintf(stdout, "]\n");
-    else
-        fprintf(stdout, "]");
+    if (depth != 0)
+        printf("\n");
 
     return curr;
 }
-
 
 /*
 traverse array according to backstrides and execute a printf on each element
 */
 void smShow(Array *arr)
 {
+    printf("\n");
     char *curr = (char *)arr->data;
 
     curr = __traverseHelper__(
@@ -622,7 +614,7 @@ void smReshapeInplace(Array *arr, const int *shape, int ndim)
 
     __recalculateStrides__(arr);
     __recalculateBackstrides__(arr);
-    __createArrayIndices__(arr);
+    // __createArrayIndices__(arr);
     __setArrayFlags__(arr);
 }
 
@@ -671,7 +663,7 @@ Array *smTransposeNew(Array *arr, const int *axes)
     free(newshape);
     free(newstrides);
     __recalculateBackstrides__(res);
-    __createArrayIndices__(res);
+    // __createArrayIndices__(res);
     __setArrayFlags__(res);
 
     free(_axes);
