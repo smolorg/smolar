@@ -4,3 +4,4 @@ smolar
 *.o
 *.gdb
 main
+__pycache__
