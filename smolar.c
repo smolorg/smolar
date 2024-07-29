@@ -217,7 +217,7 @@ void __createLinearIndices__(Array *arr)
         arr->lidxs->indices[i] = 0;
         for (int j = 0; j < arr->ndim; j++)
         {
-            arr->lidxs->indices[i] += (arr->idxs->indices[i][j] * arr->strides[j]);
+            arr->lidxs->indices[i] += (arr->idxs->indices[i][j] * arr->strides[j]) / arr->itemsize;
         }
     }
 }
@@ -279,6 +279,7 @@ Array *smCreate(const int *shape, int ndim)
     __recalculateStrides__(arr);
     __recalculateBackstrides__(arr);
     __createArrayIndices__(arr);
+    __createLinearIndices__(arr);
     __setArrayFlags__(arr);
 
     // allocate data
@@ -550,24 +551,22 @@ Array *__broadcastArray__(Array *arr, const int *shape, int ndim)
 {
     Array *res = smCreate(shape, ndim);
 
-    bool do_copy = (res->totalsize == arr->totalsize) ? false : true;
+    int n_prepend = ndim - arr->ndim;
 
-    if (!do_copy)
-        smFromValues(res, arr->data);
-    else
+    for (int i = 0; i < res->totalsize; i++)
     {
-        // resultant totalsize of broadcasting one Array (if possible)
-        // will always be a multiple of original Array's totalsize
-        // example: (3, ) and (2, 2, 3)
-        // when the index reaches the original array's boundary, wrap around to 0
-
-        int boundary = arr->totalsize;
-        for (int i = 0; i < res->totalsize; i++)
+        int src_idx = 0;
+        for (int dim = 0; dim < arr->ndim; dim++)
         {
-            res->data[i] = arr->data[i % boundary];
+            if (arr->shape[dim] > 1)
+            {
+                src_idx += (res->idxs->indices[i][n_prepend + dim] % arr->shape[dim]) * arr->strides[dim];
+            }
         }
-    }
 
+        // copy the value from source index to res
+        res->data[res->lidxs->indices[i]] = arr->data[src_idx / arr->itemsize];
+    }
     return res;
 }
 
@@ -613,6 +612,7 @@ void smReshapeInplace(Array *arr, const int *shape, int ndim)
     __recalculateStrides__(arr);
     __recalculateBackstrides__(arr);
     __createArrayIndices__(arr);
+    __createLinearIndices__(arr);
     __setArrayFlags__(arr);
 }
 
@@ -662,6 +662,7 @@ Array *smTransposeNew(Array *arr, const int *axes)
     free(newstrides);
     __recalculateBackstrides__(res);
     __createArrayIndices__(res);
+    __createLinearIndices__(res);
     __setArrayFlags__(res);
 
     free(_axes);

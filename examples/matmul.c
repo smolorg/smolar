@@ -5,24 +5,22 @@
 
 int main()
 {
-    int shape_a[] = {100, 1024};
-    int shape_b[] = {100, 1024}; // will be transposed
+    int shape_a[] = {5, 4, 2, 3};
+    int shape_b[] = {5, 4, 3, 4};
 
     int num_runs = 5;
     clock_t start, end;
     float cpu_time_used, total_time = 0.0f;
 
-    Array *a = smReshapeNew(smArange(1, (100 * 1024) + 1, 1), shape_a, 2);
-    Array *b = smTransposeNew(
-        smReshapeNew(smArange(1, (100 * 1024) + 1, 1), shape_b, 2),
-        NULL);
+    Array *a = smReshapeNew(smArange(1, (5*4*2*3) + 1, 1), shape_a, 4);
+    Array *b = smReshapeNew(smArange(1, (5*4*3*4) + 1, 1), shape_b, 4);
 
     printf("\nA shape:\n");
     __printArrayInternals__(a, a->shape);
     printf("B shape:\n");
     __printArrayInternals__(b, b->shape);
 
-    printf("benchmarking...\n");
+    printf("benchmarking matmul...\n");
     for (int i = 0; i < num_runs; i++)
     {
         start = clock();
