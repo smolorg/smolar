@@ -560,7 +560,9 @@ Array *__broadcastArray__(Array *arr, const int *shape, int ndim)
         {
             if (arr->shape[dim] > 1)
             {
-                src_idx += (res->idxs->indices[i][n_prepend + dim] % arr->shape[dim]) * arr->strides[dim];
+                src_idx += (
+                    res->idxs->indices[i][n_prepend + dim] % arr->shape[dim]
+                ) * arr->strides[dim];
             }
         }
 
