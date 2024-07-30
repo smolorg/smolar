@@ -240,6 +240,14 @@ void printArrayIndices(Array *arr)
     }
 }
 
+void __setArrayMetadata__(Array *arr) {
+    __recalculateStrides__(arr);
+    __recalculateBackstrides__(arr);
+    __createArrayIndices__(arr);
+    __createLinearIndices__(arr);
+    __setArrayFlags__(arr);
+}
+
 /*
 assume that the shape and number of dims are given,
 create a new Array from that.
@@ -273,14 +281,7 @@ Array *smCreate(const int *shape, int ndim)
         arr->totalsize *= shape[i];
     }
 
-    // populate strides
-    // by default C-order
-    // so strides[ndim - 1] = itemsize
-    __recalculateStrides__(arr);
-    __recalculateBackstrides__(arr);
-    __createArrayIndices__(arr);
-    __createLinearIndices__(arr);
-    __setArrayFlags__(arr);
+    __setArrayMetadata__(arr);
 
     // allocate data
     arr->data = (float *)malloc(arr->totalsize * arr->itemsize);
@@ -611,11 +612,7 @@ void smReshapeInplace(Array *arr, const int *shape, int ndim)
         arr->shape[i] = shape[i];
     }
 
-    __recalculateStrides__(arr);
-    __recalculateBackstrides__(arr);
-    __createArrayIndices__(arr);
-    __createLinearIndices__(arr);
-    __setArrayFlags__(arr);
+    __setArrayMetadata__(arr);
 }
 
 /*
@@ -662,12 +659,13 @@ Array *smTransposeNew(Array *arr, const int *axes)
     }
     free(newshape);
     free(newstrides);
+    free(_axes);
+
     __recalculateBackstrides__(res);
     __createArrayIndices__(res);
     __createLinearIndices__(res);
     __setArrayFlags__(res);
 
-    free(_axes);
     return res;
 }
 

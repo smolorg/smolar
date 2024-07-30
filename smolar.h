@@ -67,6 +67,7 @@ void __createLinearIndices__(Array *arr);
 bool __checkShapeCompatible__(Array *arr, const int *shape, int ndim);
 void __printArrayInternals__(Array *arr, int *s);
 void __printArrayData__(Array *arr);
+void __setArrayMetadata__(Array *arr);
 int *__broadcastFinalShape__(Array *a, Array *b);
 Array *__broadcastArray__(Array *arr, const int *shape, int ndim);
 
