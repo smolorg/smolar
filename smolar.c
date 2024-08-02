@@ -222,6 +222,17 @@ void __createLinearIndices__(Array *arr)
     }
 }
 
+// return the element present at index in linear indices
+float smGet(Array *arr, int index)
+{
+    return arr->data[arr->lidxs->indices[index]];
+}
+
+void smSet(Array *arr, int index, float value)
+{
+    arr->data[arr->lidxs->indices[index]] = value;
+}
+
 // helper function to print ArrayIndices (for debugging)
 void printArrayIndices(Array *arr)
 {
@@ -678,7 +689,8 @@ Array *__PaddArrays__(Array *a, Array *b)
 
     for (int i = 0; i < a->totalsize; i++)
     {
-        res->data[i] = a->data[i] + b->data[i];
+        float value = smGet(a, i) + smGet(b, i);
+        smSet(res, i, value);
     }
 
     return res;
@@ -690,7 +702,8 @@ Array *__PmulArrays__(Array *a, Array *b)
 
     for (int i = 0; i < a->totalsize; i++)
     {
-        res->data[i] = a->data[i] * b->data[i];
+        float value = smGet(a, i) * smGet(b, i);
+        smSet(res, i, value);
     }
 
     return res;
